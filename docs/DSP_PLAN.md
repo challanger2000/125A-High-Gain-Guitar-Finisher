@@ -30,7 +30,22 @@ The algorithm searches several upper-mid regions and reacts to either transient 
 
 ### FINISH macro
 
-FINISH scales the adaptive wet correction against the measured source. At zero, with LOW CUT off, the audio path remains exactly transparent while the analysis continues learning in the background.
+FINISH scales the adaptive wet correction against the measured source. At zero, with LOW CUT off, the audio path remains exactly transparent.
+
+### Internal Auto Level
+
+A slow energy comparator measures the loudness loss caused by FINISH and restores only that loss.
+
+Design boundaries:
+
+- no peak matching,
+- no fast gain riding,
+- no compensation for LOW CUT 80 Hz,
+- maximum makeup +1.5 dB,
+- fast return toward unity when the correction requirement falls,
+- silence detection resets stale programme history.
+
+The aim is to remove loudness bias when judging FINISH, not to turn the plugin into a compressor or maximizer.
 
 ## Why the system remains bounded
 
@@ -42,7 +57,8 @@ The plugin still uses fixed safety limits for:
 - maximum reduction,
 - detector attack/release,
 - selection hysteresis,
-- frequency crossfade speed.
+- frequency crossfade speed,
+- Auto Level response and maximum makeup.
 
 These limits prevent unstable self-EQ behaviour and make the processor deterministic enough to test.
 
@@ -52,8 +68,7 @@ Only add these after measurements and listening tests demonstrate a clear benefi
 
 1. attack/presence shaping,
 2. subtle harmonic cohesion,
-3. peak control,
-4. loudness-aware compensation.
+3. peak control.
 
 Any nonlinear stage must be measured for harmonic structure and aliasing before oversampling is considered.
 

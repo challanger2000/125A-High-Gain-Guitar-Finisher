@@ -22,9 +22,11 @@ It is **not** intended as an all-purpose processor for clean, acoustic, western 
 
 The VST3 foundation provides stereo I/O, 32/64-bit processing support, automation/state handling and backward-compatible state migration.
 
-FINISH is now adaptive rather than one fixed EQ recipe. The DSP continuously measures the incoming guitar and searches separate low-end, body and harshness regions. Frequency selection is smoothed and stereo-linked. FINISH controls the amount of the resulting adaptive correction.
+FINISH is adaptive rather than one fixed EQ recipe. The DSP continuously measures the incoming guitar and searches separate low-end, body and harshness regions. Frequency selection is smoothed and stereo-linked.
 
-The optional 80 Hz low cut is deliberately separate from the adaptive system, so users can choose a conventional fixed high-pass without forcing it on every guitar.
+A bounded internal auto-level stage now compares the signal immediately before and after FINISH. It restores only measured FINISH loudness loss, with slow programme tracking, silence reset and a maximum makeup limit of +1.5 dB. The optional 80 Hz low cut is excluded from that comparison, so the fixed high-pass is never compensated away.
+
+LOW CUT 80 Hz remains a deliberate user choice and is off by default.
 
 ROOM remains intentionally neutral until its dedicated industrial ambience is designed and listening-tested.
 
@@ -41,6 +43,7 @@ The manual **Build Windows VST3** workflow builds the plugin and runs:
 
 - DSP smoke tests,
 - adaptive multi-signature fixtures,
+- dedicated auto-level tests,
 - tonal/RMS/stereo measurements,
 - impulse/latency validation.
 

@@ -32,6 +32,8 @@ The High Gain Guitar Finisher does not depend on those repositories at build tim
 
 With FINISH at zero and LOW CUT 80 Hz off, left and right must null exactly against the input.
 
+Auto Level is reset to unity at FINISH = 0 so previous makeup cannot contaminate a null test or a later dry passage.
+
 ### Adaptive multi-signature fixtures
 
 Two deliberately different synthetic high-gain signatures are processed by the same DSP.
@@ -43,6 +45,21 @@ The test requires the detected regions to move substantially between them. The p
 - harshness: 3.2 kHz to 6.8 kHz.
 
 The exact numbers are not product targets. The test exists to prove that the algorithm is not secretly one fixed 300 Hz / 4.8 kHz recipe.
+
+### Auto-level metrology
+
+Dedicated tests feed the Auto Level with known broadband attenuation at 44.1, 48 and 96 kHz.
+
+They verify:
+
+- recovery of modest measured loss,
+- +1.5 dB hard makeup ceiling,
+- no gain below unity,
+- exact unity after FINISH is set to zero,
+- return toward unity across true silence,
+- finite output.
+
+The main measurement fixture also requires the final RMS difference to remain within a narrow range around the source while leaving spectral differences measurable.
 
 ### Tonal-band guardrails
 
@@ -57,11 +74,13 @@ A deterministic guitar-like stress signal is measured in:
 - 8000-12000 Hz
 - 12000-20000 Hz
 
-The default adaptive path is explicitly guarded against recreating the old heavy fixed sub/body attenuation.
+Broadband Auto Level changes absolute band levels but not their relative spectral relationship, so tonal interpretation remains based on the pattern across bands rather than one absolute gain value.
 
 ### RMS / peak / crest
 
 Input and output are compared so a processing change cannot hide behind loudness bias.
+
+Peaks are intentionally not matched. A lower processed peak can therefore coexist with RMS/loudness parity.
 
 ### Stereo integrity
 
@@ -69,13 +88,29 @@ Correlation and mid/side behaviour are tracked. Stereo-linked adaptive decisions
 
 ### Optional 80 Hz low cut
 
-The separate switch is measured independently from FINISH.
+The separate switch is measured independently from FINISH and is excluded from Auto Level's reference comparison.
 
 The current calibrated smoke test expects strong attenuation at 40 Hz while preserving 1 kHz essentially unchanged.
 
 ### Impulse / latency
 
 The topology currently has no look-ahead or block buffering. The impulse test verifies immediate output and catches accidental latency introduction.
+
+## Real-world reference measurement
+
+The latest real 0%/100% guitar pair measured approximately:
+
+- pre-Auto-Level RMS difference: -0.55 dB,
+- pre-Auto-Level integrated loudness difference: -0.57 LU.
+
+Applying the implemented Auto Level rule offline to the same aligned pair predicts approximately:
+
+- RMS difference: -0.04 dB,
+- integrated loudness difference: -0.06 LU,
+- maximum makeup: +0.71 dB,
+- processed peak still about 0.49 dB below the 0% reference.
+
+This is the intended behaviour: loudness parity without peak restoration.
 
 ## Later measurements
 

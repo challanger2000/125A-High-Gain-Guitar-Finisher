@@ -7,10 +7,11 @@
 using HighGainGuitarFinisher::dsp::MetalFinisherDSP;
 
 namespace {
+
 constexpr double pi = 3.141592653589793238462643383279502884;
+constexpr double sampleRate = 48000.0;
 
 double measureGain(double frequency, double finish) {
-    constexpr double sampleRate = 48000.0;
     constexpr int warmup = 24000;
     constexpr int measured = 48000;
 
@@ -18,45 +19,101 @@ double measureGain(double frequency, double finish) {
     dsp.prepare(sampleRate);
     dsp.setFinish(finish);
 
-    double inPower = 0.0;
-    double outPower = 0.0;
+    double inputPower = 0.0;
+    double outputPower = 0.0;
 
     for (int i = 0; i < warmup + measured; ++i) {
-        const double x = std::sin(2.0 * pi * frequency * i / sampleRate);
-        const double y = dsp.processSample(0, x);
-        assert(std::isfinite(y));
+        const double x =
+            std::sin(2.0 * pi * frequency * i / sampleRate);
+
+        double left = x;
+        double right = x;
+        dsp.processFrame(left, right);
+
+        assert(std::isfinite(left));
+        assert(std::isfinite(right));
 
         if (i >= warmup) {
-            inPower += x * x;
-            outPower += y * y;
+            inputPower += x * x;
+            outputPower += left * left;
         }
     }
 
-    return std::sqrt(outPower / inPower);
-}
+    return std::sqrt(outputPower / inputPower);
 }
 
-int main() {
+void verifyExactTransparency() {
     MetalFinisherDSP dsp;
-    dsp.prepare(48000.0);
+    dsp.prepare(sampleRate);
     dsp.setFinish(0.0);
 
     for (int i = 0; i < 1000; ++i) {
-        const double x = std::sin(2.0 * pi * 440.0 * i / 48000.0);
-        assert(dsp.processSample(0, x) == x);
+        const double x =
+            std::sin(2.0 * pi * 440.0 * i / sampleRate);
+
+        double left = x;
+        double right = -x;
+        const double originalLeft = left;
+        const double originalRight = right;
+
+        dsp.processFrame(left, right);
+
+        assert(left == originalLeft);
+        assert(right == originalRight);
     }
+}
+
+void verifyDynamicLowEndControl() {
+    MetalFinisherDSP dsp;
+    dsp.prepare(sampleRate);
+    dsp.setFinish(1.0);
+
+    for (int i = 0; i < static_cast<int>(sampleRate); ++i) {
+        const double x =
+            0.8 * std::sin(2.0 * pi * 100.0 * i / sampleRate);
+
+        double left = x;
+        double right = x;
+        dsp.processFrame(left, right);
+    }
+
+    const double activeReduction = dsp.currentDynamicReduction();
+    assert(activeReduction > 0.30);
+    assert(activeReduction <= 0.451);
+
+    for (int i = 0; i < static_cast<int>(sampleRate); ++i) {
+        const double x =
+            0.5 * std::sin(2.0 * pi * 2000.0 * i / sampleRate);
+
+        double left = x;
+        double right = x;
+        dsp.processFrame(left, right);
+    }
+
+    const double recoveredReduction = dsp.currentDynamicReduction();
+    assert(recoveredReduction < 0.01);
+}
+
+} // namespace
+
+int main() {
+    verifyExactTransparency();
+    verifyDynamicLowEndControl();
 
     const double gain80 = measureGain(80.0, 1.0);
     const double gain300 = measureGain(300.0, 1.0);
     const double gain1000 = measureGain(1000.0, 1.0);
 
-    assert(gain80 < 0.75);
+    assert(gain80 < 0.55);
     assert(gain300 < 0.75);
     assert(gain1000 > 0.90);
     assert(gain1000 < 1.05);
 
-    std::cout << "DSP smoke test passed\n"
-              << "80 Hz gain: " << gain80 << "\n"
-              << "300 Hz gain: " << gain300 << "\n"
-              << "1 kHz gain: " << gain1000 << "\n";
+    std::cout
+        << "DSP smoke test passed\n"
+        << "80 Hz gain: " << gain80 << "\n"
+        << "300 Hz gain: " << gain300 << "\n"
+        << "1 kHz gain: " << gain1000 << "\n";
+
+    return 0;
 }

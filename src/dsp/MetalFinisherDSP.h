@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Biquad.h"
+#include "DynamicLowEndController.h"
 
 #include <array>
 
@@ -11,7 +12,11 @@ public:
     void prepare(double sampleRate) noexcept;
     void reset() noexcept;
     void setFinish(double normalized) noexcept;
-    double processSample(int channel, double input) noexcept;
+    void processFrame(double& left, double& right) noexcept;
+
+    double currentDynamicReduction() const noexcept {
+        return dynamicLowEnd_.currentReduction();
+    }
 
 private:
     struct ChannelState {
@@ -22,6 +27,8 @@ private:
     void updateFilters() noexcept;
 
     std::array<ChannelState, 2> channels_ {};
+    DynamicLowEndController dynamicLowEnd_ {};
+
     double sampleRate_ {44100.0};
     double finish_ {0.0};
 };

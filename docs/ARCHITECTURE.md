@@ -12,25 +12,37 @@ The project is intentionally split into a thin VST3 integration layer and reusab
 
 ## Current signal path
 
-`Stereo In -> FINISH Stage 1 -> ROOM (neutral placeholder) -> OUTPUT -> Stereo Out`
+`Stereo In -> FINISH static cleanup -> FINISH dynamic low-end control -> ROOM (neutral placeholder) -> OUTPUT -> Stereo Out`
 
 BYPASS skips intentional processing and output trim so bypass remains unity.
 
-## FINISH Stage 1
+## FINISH Stage 1 — static cleanup
 
-The first measured stage is deliberately conservative:
+The static stage uses one fully designed wet branch:
 
-1. a second-order high-pass filter whose cutoff moves from 55 Hz toward 85 Hz,
-2. a broad peaking cut centred at 300 Hz, reaching -4 dB at maximum FINISH,
-3. dry/processed interpolation tied to FINISH so `FINISH = 0` is exactly transparent.
+1. second-order high-pass at 85 Hz,
+2. broad peaking cut centred at 300 Hz at -4 dB,
+3. dry/wet interpolation controlled by FINISH.
 
-This stage targets excess sub/low-end energy and low-mid congestion commonly found after high-gain amp/cab processing. It is not considered the complete FINISH algorithm.
+Keeping the filter coefficients fixed avoids coefficient jumps during FINISH automation. `FINISH = 0` is exactly transparent.
+
+## FINISH Stage 2 — dynamic low-end / palm-mute control
+
+The dynamic stage is intentionally level-independent:
+
+1. a stereo detector isolates the low band below roughly 180 Hz,
+2. low-band and broadband envelopes are compared,
+3. low-frequency dominance drives a bounded reduction,
+4. one shared reduction value is applied to both channels,
+5. attack/release smoothing prevents abrupt gain changes.
+
+The processor subtracts only part of the detected low-band component rather than turning the whole signal down. This is intended to restrain palm-mute thump without collapsing the useful guitar midrange or destabilizing stereo balance.
 
 ## Real-time rules
 
 The audio callback must not allocate memory, lock a mutex, access files, log, or perform GUI work.
 
-DSP objects are prepared/reset from the VST3 lifecycle. Coefficients are updated only when a parameter value changes.
+DSP objects are prepared/reset from the VST3 lifecycle. Runtime processing uses preallocated state only.
 
 ## State compatibility
 
@@ -41,9 +53,11 @@ The processor state begins with `kStateVersion`. Public test builds must not sil
 The standalone DSP smoke test checks:
 
 - exact transparency at `FINISH = 0`,
-- finite output,
+- finite stereo output,
 - expected attenuation around 80 Hz,
 - expected attenuation around 300 Hz,
-- preservation of the useful midrange around 1 kHz.
+- preservation of the useful midrange around 1 kHz,
+- activation of dynamic low-end control on sustained low-frequency material,
+- release/recovery when the input moves back into the guitar midrange.
 
 DAW/host validation remains a separate layer and must be performed on built VST3 bundles.

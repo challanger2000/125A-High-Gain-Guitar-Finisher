@@ -22,18 +22,25 @@ Its job is not to replace the amp or cabinet. Its job is to move an already usab
 - exact transparency at FINISH = 0,
 - standalone frequency-response smoke tests.
 
+### Stage 2 — implemented
+
+- stereo-linked dynamic low-end dominance detector,
+- palm-mute-oriented low-band control,
+- attack/release smoothing,
+- no broadband gain reduction,
+- regression tests for activation and recovery.
+
 ### Candidate later stages
 
 Only add these after measurement and listening tests demonstrate a real benefit:
 
-1. dynamic palm-mute control,
-2. dynamic resonance suppression,
-3. fizz/harshness control,
-4. body stabilization,
-5. attack/presence shaping,
-6. subtle harmonic cohesion,
-7. peak control,
-8. loudness-aware compensation.
+1. dynamic resonance suppression,
+2. fizz/harshness control,
+3. body stabilization,
+4. attack/presence shaping,
+5. subtle harmonic cohesion,
+6. peak control,
+7. loudness-aware compensation.
 
 These are design candidates, not promises that every stage will remain in the final DSP.
 

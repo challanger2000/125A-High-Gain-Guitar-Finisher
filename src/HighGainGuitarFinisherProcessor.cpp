@@ -108,31 +108,44 @@ void Processor::processBlock(
 
     const bool bypassed = bypass_ >= 0.5;
     const double outputDb = (output_ * 24.0) - 12.0;
-    const double outputGain = bypassed ? 1.0 : std::pow(10.0, outputDb / 20.0);
+    const double outputGain =
+        bypassed ? 1.0 : std::pow(10.0, outputDb / 20.0);
 
     finisher_.setFinish(finish_);
 
     for (int32 sample = 0; sample < numSamples; ++sample) {
-        for (int32 channel = 0; channel < numChannels; ++channel) {
-            const Sample* input = inputs[channel];
-            Sample* output = outputs[channel];
+        const Sample* inputLeft = inputs[0];
+        const Sample* inputRight =
+            numChannels > 1 ? inputs[1] : inputs[0];
 
-            if (!output)
-                continue;
+        Sample* outputLeft = outputs[0];
+        Sample* outputRight =
+            numChannels > 1 ? outputs[1] : nullptr;
 
-            const double x = input ? static_cast<double>(input[sample]) : 0.0;
-            if (!std::isfinite(x)) {
-                output[sample] = static_cast<Sample>(0);
-                continue;
-            }
+        if (!outputLeft)
+            continue;
 
-            // ROOM remains deliberately neutral until the dedicated industrial
-            // ambience is designed and listening-tested.
-            const double finished = bypassed
-                ? x
-                : finisher_.processSample(channel, x);
+        double left =
+            inputLeft ? static_cast<double>(inputLeft[sample]) : 0.0;
+        double right =
+            inputRight ? static_cast<double>(inputRight[sample]) : left;
 
-            output[sample] = static_cast<Sample>(finished * outputGain);
+        if (!std::isfinite(left))
+            left = 0.0;
+        if (!std::isfinite(right))
+            right = 0.0;
+
+        if (!bypassed)
+            finisher_.processFrame(left, right);
+
+        // ROOM remains deliberately neutral until the dedicated industrial
+        // ambience is designed and listening-tested.
+        outputLeft[sample] =
+            static_cast<Sample>(left * outputGain);
+
+        if (outputRight) {
+            outputRight[sample] =
+                static_cast<Sample>(right * outputGain);
         }
     }
 }

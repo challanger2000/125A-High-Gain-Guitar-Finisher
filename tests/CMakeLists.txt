@@ -1,5 +1,6 @@
 add_executable(HighGainGuitarFinisherDSPTests
     dsp_smoke.cpp
+    ../src/dsp/DynamicLowEndController.cpp
     ../src/dsp/MetalFinisherDSP.cpp
 )
 

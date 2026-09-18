@@ -9,8 +9,10 @@ void MetalFinisherDSP::prepare(double sampleRate) noexcept {
     sampleRate_ = (std::isfinite(sampleRate) && sampleRate > 1000.0)
         ? sampleRate
         : 44100.0;
-    reset();
+
     updateFilters();
+    dynamicLowEnd_.prepare(sampleRate_);
+    reset();
 }
 
 void MetalFinisherDSP::reset() noexcept {
@@ -18,28 +20,22 @@ void MetalFinisherDSP::reset() noexcept {
         channel.highPass.reset();
         channel.lowMid.reset();
     }
+
+    dynamicLowEnd_.reset();
 }
 
 void MetalFinisherDSP::setFinish(double normalized) noexcept {
-    const double next = std::clamp(
+    finish_ = std::clamp(
         std::isfinite(normalized) ? normalized : 0.0,
         0.0,
         1.0);
-
-    if (std::abs(next - finish_) < 1.0e-6)
-        return;
-
-    finish_ = next;
-    updateFilters();
 }
 
 void MetalFinisherDSP::updateFilters() noexcept {
-    const double cutoffHz = 55.0 + 30.0 * finish_;
-    const double lowMidHz = 300.0;
-    const double lowMidCutDb = -4.0 * finish_;
-
-    const auto highPass = makeHighPass(sampleRate_, cutoffHz, 0.7071067811865476);
-    const auto lowMid = makePeaking(sampleRate_, lowMidHz, 0.85, lowMidCutDb);
+    const auto highPass =
+        makeHighPass(sampleRate_, 85.0, 0.7071067811865476);
+    const auto lowMid =
+        makePeaking(sampleRate_, 300.0, 0.85, -4.0);
 
     for (auto& channel : channels_) {
         channel.highPass.setCoefficients(highPass);
@@ -47,22 +43,31 @@ void MetalFinisherDSP::updateFilters() noexcept {
     }
 }
 
-double MetalFinisherDSP::processSample(int channel, double input) noexcept {
-    if (!std::isfinite(input))
-        return 0.0;
+void MetalFinisherDSP::processFrame(double& left,
+                                    double& right) noexcept {
+    if (!std::isfinite(left))
+        left = 0.0;
+    if (!std::isfinite(right))
+        right = 0.0;
 
     if (finish_ <= 0.0)
-        return input;
+        return;
 
-    const int index = std::clamp(channel, 0, 1);
-    auto& state = channels_[static_cast<std::size_t>(index)];
+    const double dryLeft = left;
+    const double dryRight = right;
 
-    double processed = state.highPass.process(input);
-    processed = state.lowMid.process(processed);
+    double wetLeft =
+        channels_[0].lowMid.process(
+            channels_[0].highPass.process(left));
 
-    // Preserve exact transparency at FINISH = 0 and make the first stage scale
-    // gradually with the macro rather than switching in abruptly.
-    return input + (processed - input) * finish_;
+    double wetRight =
+        channels_[1].lowMid.process(
+            channels_[1].highPass.process(right));
+
+    dynamicLowEnd_.processFrame(wetLeft, wetRight);
+
+    left = dryLeft + (wetLeft - dryLeft) * finish_;
+    right = dryRight + (wetRight - dryRight) * finish_;
 }
 
 } // namespace HighGainGuitarFinisher::dsp

@@ -5,6 +5,8 @@ set(HIGH_GAIN_GUITAR_FINISHER_SOURCES
     HighGainGuitarFinisherController.h
     HighGainGuitarFinisherController.cpp
     dsp/Biquad.h
+    dsp/DynamicLowEndController.h
+    dsp/DynamicLowEndController.cpp
     dsp/MetalFinisherDSP.h
     dsp/MetalFinisherDSP.cpp
     entry.cpp

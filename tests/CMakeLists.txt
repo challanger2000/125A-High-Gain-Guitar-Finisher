@@ -1,6 +1,7 @@
 set(HGGF_DSP_SOURCES
     ../src/dsp/AdaptiveBandController.cpp
     ../src/dsp/AutoLevelCompensator.cpp
+    ../src/dsp/IndustrialRoom.cpp
     ../src/dsp/MetalFinisherDSP.cpp
 )
 

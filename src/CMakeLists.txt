@@ -9,6 +9,8 @@ set(HIGH_GAIN_GUITAR_FINISHER_SOURCES
     dsp/AdaptiveBandController.cpp
     dsp/AutoLevelCompensator.h
     dsp/AutoLevelCompensator.cpp
+    dsp/IndustrialRoom.h
+    dsp/IndustrialRoom.cpp
     dsp/MetalFinisherDSP.h
     dsp/MetalFinisherDSP.cpp
     entry.cpp

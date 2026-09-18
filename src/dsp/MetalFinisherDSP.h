@@ -2,7 +2,8 @@
 
 #include "AdaptiveBandController.h"
 #include "AutoLevelCompensator.h"
-#include "Biquad.h"\n#include "IndustrialRoom.h"
+#include "Biquad.h"
+#include "IndustrialRoom.h"
 
 #include <array>
 
@@ -14,7 +15,8 @@ public:
     void reset() noexcept;
 
     void setFinish(double normalized) noexcept;
-    void setLowCut80(bool enabled) noexcept;\n    void setRoom(double normalized) noexcept;
+    void setLowCut80(bool enabled) noexcept;
+    void setRoom(double normalized) noexcept;
 
     void processFrame(double& left, double& right) noexcept;
 
@@ -52,7 +54,8 @@ private:
     AdaptiveBandController lowEnd_ {};
     AdaptiveBandController body_ {};
     AdaptiveBandController harshness_ {};
-    AutoLevelCompensator autoLevel_ {};\n    IndustrialRoom room_ {};
+    AutoLevelCompensator autoLevel_ {};
+    IndustrialRoom room_ {};
 
     double sampleRate_ {44100.0};
     double finish_ {0.0};

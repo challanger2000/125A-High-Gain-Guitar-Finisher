@@ -37,7 +37,8 @@ void MetalFinisherDSP::prepare(double sampleRate) noexcept {
         {3200.0, 4200.0, 5400.0, 6800.0},
         1.0);
 
-    autoLevel_.prepare(sampleRate_);\n    room_.prepare(sampleRate_);
+    autoLevel_.prepare(sampleRate_);
+    room_.prepare(sampleRate_);
 
     reset();
 }
@@ -50,6 +51,7 @@ void MetalFinisherDSP::reset() noexcept {
     body_.reset();
     harshness_.reset();
     autoLevel_.reset();
+    room_.reset();
 
     lowCutMix_ = lowCutTarget_;
 }
@@ -130,16 +132,12 @@ void MetalFinisherDSP::processFrame(
             (finishRight - baseRight) *
                 finish_;
 
-        // Compare against the post-low-cut reference so the optional fixed
-        // 80 Hz filter is never "undone" by makeup gain.
         autoLevel_.processFrame(
             baseLeft,
             baseRight,
             processedLeft,
             processedRight);
     } else {
-        // FINISH = 0 remains exact before ROOM. This also prevents stale
-        // makeup from a previous non-zero FINISH value.
         autoLevel_.reset();
     }
 

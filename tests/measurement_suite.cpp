@@ -1,4 +1,4 @@
-#include "MetalFinisherDSP.h"
+#include "support/TestSupport.h"\n#include "MetalFinisherDSP.h"
 #include "support/AudioMeasurements.h"
 
 #include <algorithm>
@@ -119,15 +119,15 @@ int main() {
         0.0,
         bypassMakeupDb);
 
-    assert(
+    HGGF_REQUIRE(
         HGGFTests::nullPeak(inputLeft, bypassLeft) ==
         0.0);
 
-    assert(
+    HGGF_REQUIRE(
         HGGFTests::nullPeak(inputRight, bypassRight) ==
         0.0);
 
-    assert(bypassMakeupDb == 0.0);
+    HGGF_REQUIRE(bypassMakeupDb == 0.0);
 
     auto outputLeft = inputLeft;
     auto outputRight = inputRight;
@@ -194,26 +194,26 @@ int main() {
             inputBands.presence5000To8000,
             outputBands.presence5000To8000);
 
-    assert(std::isfinite(rmsDelta));
-    assert(std::isfinite(outputMetrics.correlation));
-    assert(std::isfinite(outputMetrics.crestDb));
+    HGGF_REQUIRE(std::isfinite(rmsDelta));
+    HGGF_REQUIRE(std::isfinite(outputMetrics.correlation));
+    HGGF_REQUIRE(std::isfinite(outputMetrics.crestDb));
 
     // Auto-level must remove loudness bias without forcing exact peak matching.
-    assert(rmsDelta > -0.25);
-    assert(rmsDelta < 0.15);
-    assert(makeupDb >= 0.0);
-    assert(makeupDb <= 1.5001);
+    HGGF_REQUIRE(rmsDelta > -0.25);
+    HGGF_REQUIRE(rmsDelta < 0.15);
+    HGGF_REQUIRE(makeupDb >= 0.0);
+    HGGF_REQUIRE(makeupDb <= 1.5001);
 
     // Adaptive spectral work must remain selective after broadband makeup.
-    assert(subDelta > -1.5);
-    assert(bodyDelta > -0.8);
-    assert(midsDelta > -0.8);
-    assert(presenceDelta > -1.0);
+    HGGF_REQUIRE(subDelta > -1.5);
+    HGGF_REQUIRE(bodyDelta > -0.8);
+    HGGF_REQUIRE(midsDelta > -0.8);
+    HGGF_REQUIRE(presenceDelta > -1.0);
 
-    assert(lowDelta < -0.15);
-    assert(upperMidsDelta < 0.10);
+    HGGF_REQUIRE(lowDelta < -0.15);
+    HGGF_REQUIRE(upperMidsDelta < 0.10);
 
-    assert(
+    HGGF_REQUIRE(
         std::abs(
             outputMetrics.correlation -
             inputMetrics.correlation) < 0.05);

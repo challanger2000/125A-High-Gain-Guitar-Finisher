@@ -11,6 +11,7 @@ add_executable(HighGainGuitarFinisherDSPTests
 
 target_include_directories(HighGainGuitarFinisherDSPTests
     PRIVATE
+        .
         ../src/dsp
 )
 
@@ -37,6 +38,7 @@ add_executable(HighGainGuitarFinisherAdaptiveTests
 target_include_directories(
     HighGainGuitarFinisherAdaptiveTests
     PRIVATE
+        .
         ../src/dsp
 )
 
@@ -63,6 +65,7 @@ add_executable(HighGainGuitarFinisherAutoLevelTests
 target_include_directories(
     HighGainGuitarFinisherAutoLevelTests
     PRIVATE
+        .
         ../src/dsp
 )
 
@@ -116,6 +119,7 @@ add_executable(HighGainGuitarFinisherLatencyImpulse
 target_include_directories(
     HighGainGuitarFinisherLatencyImpulse
     PRIVATE
+        .
         ../src/dsp
 )
 

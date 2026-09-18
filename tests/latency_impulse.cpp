@@ -1,4 +1,4 @@
-#include "MetalFinisherDSP.h"
+#include "support/TestSupport.h"\n#include "MetalFinisherDSP.h"
 
 #include <algorithm>
 #include <cassert>
@@ -23,8 +23,8 @@ int main() {
         double right = left;
         dsp.processFrame(left, right);
         output[static_cast<std::size_t>(i)] = left;
-        assert(std::isfinite(left));
-        assert(std::isfinite(right));
+        HGGF_REQUIRE(std::isfinite(left));
+        HGGF_REQUIRE(std::isfinite(right));
     }
 
     const auto peakIt = std::max_element(
@@ -39,8 +39,8 @@ int main() {
 
     // Current IIR/dynamic topology has no look-ahead or buffering latency.
     // An impulse must therefore produce non-zero output immediately.
-    assert(output[0] != 0.0);
-    assert(peakIndex <= 1);
+    HGGF_REQUIRE(output[0] != 0.0);
+    HGGF_REQUIRE(peakIndex <= 1);
 
     double latePeak = 0.0;
     for (int i = 4096; i < count; ++i)
@@ -48,7 +48,7 @@ int main() {
             latePeak,
             std::abs(output[static_cast<std::size_t>(i)]));
 
-    assert(latePeak < 1.0e-4);
+    HGGF_REQUIRE(latePeak < 1.0e-4);
 
     std::cout
         << "Impulse/latency test passed\n"

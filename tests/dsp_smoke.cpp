@@ -1,4 +1,4 @@
-#include "MetalFinisherDSP.h"
+#include "support/TestSupport.h"\n#include "MetalFinisherDSP.h"
 
 #include <cassert>
 #include <cmath>
@@ -31,8 +31,8 @@ double measureLowCutGain(double frequency) {
         double right = x;
         dsp.processFrame(left, right);
 
-        assert(std::isfinite(left));
-        assert(std::isfinite(right));
+        HGGF_REQUIRE(std::isfinite(left));
+        HGGF_REQUIRE(std::isfinite(right));
 
         if (i >= warmup) {
             inputPower += x * x;
@@ -58,8 +58,8 @@ void verifyExactTransparency() {
 
         dsp.processFrame(left, right);
 
-        assert(left == x);
-        assert(right == -x);
+        HGGF_REQUIRE(left == x);
+        HGGF_REQUIRE(right == -x);
     }
 }
 
@@ -88,8 +88,8 @@ void verifyFiniteAcrossSampleRates() {
 
             dsp.processFrame(left, right);
 
-            assert(std::isfinite(left));
-            assert(std::isfinite(right));
+            HGGF_REQUIRE(std::isfinite(left));
+            HGGF_REQUIRE(std::isfinite(right));
         }
     }
 }
@@ -105,9 +105,9 @@ int main() {
     const double lowCut1000 =
         measureLowCutGain(1000.0);
 
-    assert(lowCut40 < 0.35);
-    assert(lowCut1000 > 0.99);
-    assert(lowCut1000 < 1.01);
+    HGGF_REQUIRE(lowCut40 < 0.35);
+    HGGF_REQUIRE(lowCut1000 > 0.99);
+    HGGF_REQUIRE(lowCut1000 < 1.01);
 
     std::cout
         << "DSP smoke test passed\n"

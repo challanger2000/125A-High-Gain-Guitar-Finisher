@@ -1,4 +1,4 @@
-#include "AutoLevelCompensator.h"
+#include "support/TestSupport.h"\n#include "AutoLevelCompensator.h"
 #include "MetalFinisherDSP.h"
 
 #include <algorithm>
@@ -58,10 +58,10 @@ void verifyDirectCompensation(
             left,
             right);
 
-        assert(std::isfinite(left));
-        assert(std::isfinite(right));
-        assert(level.currentGain() >= 1.0);
-        assert(level.currentGainDb() <= 1.5001);
+        HGGF_REQUIRE(std::isfinite(left));
+        HGGF_REQUIRE(std::isfinite(right));
+        HGGF_REQUIRE(level.currentGain() >= 1.0);
+        HGGF_REQUIRE(level.currentGainDb() <= 1.5001);
 
         if (i >= warmup) {
             inputSquares +=
@@ -90,11 +90,11 @@ void verifyDirectCompensation(
         linearToDb(outputRms / inputRms);
 
     if (processedScale >= 0.85) {
-        assert(std::abs(deltaDb) < 0.12);
+        HGGF_REQUIRE(std::abs(deltaDb) < 0.12);
     } else {
         // Heavy artificial loss exceeds the 1.5 dB safety cap.
-        assert(level.currentGainDb() > 1.45);
-        assert(deltaDb < -1.0);
+        HGGF_REQUIRE(level.currentGainDb() > 1.45);
+        HGGF_REQUIRE(deltaDb < -1.0);
     }
 }
 
@@ -123,7 +123,7 @@ void verifyFinishZeroAfterMakeup() {
         dsp.processFrame(left, right);
     }
 
-    assert(dsp.currentAutoLevelGainDb() > 0.0);
+    HGGF_REQUIRE(dsp.currentAutoLevelGainDb() > 0.0);
 
     dsp.setFinish(0.0);
 
@@ -139,9 +139,9 @@ void verifyFinishZeroAfterMakeup() {
 
         dsp.processFrame(left, right);
 
-        assert(left == input);
-        assert(right == -input);
-        assert(dsp.currentAutoLevelGainDb() == 0.0);
+        HGGF_REQUIRE(left == input);
+        HGGF_REQUIRE(right == -input);
+        HGGF_REQUIRE(dsp.currentAutoLevelGainDb() == 0.0);
     }
 }
 
@@ -172,7 +172,7 @@ void verifySilenceReturn() {
             right);
     }
 
-    assert(level.currentGainDb() > 0.5);
+    HGGF_REQUIRE(level.currentGainDb() > 0.5);
 
     for (int i = 0;
          i < static_cast<int>(sampleRate * 3.0);
@@ -188,7 +188,7 @@ void verifySilenceReturn() {
             right);
     }
 
-    assert(level.currentGainDb() < 0.05);
+    HGGF_REQUIRE(level.currentGainDb() < 0.05);
 }
 
 } // namespace

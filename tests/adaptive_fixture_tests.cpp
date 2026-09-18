@@ -1,4 +1,4 @@
-#include "MetalFinisherDSP.h"
+#include "support/TestSupport.h"\n#include "MetalFinisherDSP.h"
 
 #include <algorithm>
 #include <cassert>
@@ -59,8 +59,8 @@ SignatureResult runSignature(
         double right = x;
         dsp.processFrame(left, right);
 
-        assert(std::isfinite(left));
-        assert(std::isfinite(right));
+        HGGF_REQUIRE(std::isfinite(left));
+        HGGF_REQUIRE(std::isfinite(right));
 
         result.maxLowReduction = std::max(
             result.maxLowReduction,
@@ -86,18 +86,18 @@ int main() {
     const auto signatureB =
         runSignature(175.0, 480.0, 6600.0);
 
-    assert(signatureA.maxLowReduction > 0.05);
-    assert(signatureB.maxLowReduction > 0.05);
+    HGGF_REQUIRE(signatureA.maxLowReduction > 0.05);
+    HGGF_REQUIRE(signatureB.maxLowReduction > 0.05);
 
-    assert(
+    HGGF_REQUIRE(
         signatureA.lowFrequency <
         signatureB.lowFrequency - 30.0);
 
-    assert(
+    HGGF_REQUIRE(
         signatureA.bodyFrequency <
         signatureB.bodyFrequency - 80.0);
 
-    assert(
+    HGGF_REQUIRE(
         signatureA.harshFrequency <
         signatureB.harshFrequency - 1000.0);
 

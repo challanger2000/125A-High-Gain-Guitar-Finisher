@@ -30,17 +30,24 @@ Its job is not to replace the amp or cabinet. Its job is to move an already usab
 - no broadband gain reduction,
 - regression tests for activation and recovery.
 
+### Stage 3 — implemented
+
+- stereo-linked upper-mid dominance detector,
+- dynamic harshness/fizz control around 4.8 kHz,
+- bounded maximum reduction,
+- slower reduction attack to preserve pick definition,
+- no permanent low-pass filter,
+- regression tests for activation, recovery and 8 kHz preservation.
+
 ### Candidate later stages
 
 Only add these after measurement and listening tests demonstrate a real benefit:
 
-1. dynamic resonance suppression,
-2. fizz/harshness control,
-3. body stabilization,
-4. attack/presence shaping,
-5. subtle harmonic cohesion,
-6. peak control,
-7. loudness-aware compensation.
+1. body stabilization,
+2. attack/presence shaping,
+3. subtle harmonic cohesion,
+4. peak control,
+5. loudness-aware compensation.
 
 These are design candidates, not promises that every stage will remain in the final DSP.
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Biquad.h"
+#include "DynamicHarshnessController.h"
 #include "DynamicLowEndController.h"
 
 #include <array>
@@ -14,8 +15,12 @@ public:
     void setFinish(double normalized) noexcept;
     void processFrame(double& left, double& right) noexcept;
 
-    double currentDynamicReduction() const noexcept {
+    double currentDynamicLowEndReduction() const noexcept {
         return dynamicLowEnd_.currentReduction();
+    }
+
+    double currentHarshnessReduction() const noexcept {
+        return dynamicHarshness_.currentReduction();
     }
 
 private:
@@ -28,6 +33,7 @@ private:
 
     std::array<ChannelState, 2> channels_ {};
     DynamicLowEndController dynamicLowEnd_ {};
+    DynamicHarshnessController dynamicHarshness_ {};
 
     double sampleRate_ {44100.0};
     double finish_ {0.0};

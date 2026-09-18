@@ -12,7 +12,7 @@ The project is intentionally split into a thin VST3 integration layer and reusab
 
 ## Current signal path
 
-`Stereo In -> FINISH static cleanup -> FINISH dynamic low-end control -> ROOM (neutral placeholder) -> OUTPUT -> Stereo Out`
+`Stereo In -> static cleanup -> dynamic low-end control -> dynamic harshness control -> ROOM (neutral placeholder) -> OUTPUT -> Stereo Out`
 
 BYPASS skips intentional processing and output trim so bypass remains unity.
 
@@ -36,7 +36,20 @@ The dynamic stage is intentionally level-independent:
 4. one shared reduction value is applied to both channels,
 5. attack/release smoothing prevents abrupt gain changes.
 
-The processor subtracts only part of the detected low-band component rather than turning the whole signal down. This is intended to restrain palm-mute thump without collapsing the useful guitar midrange or destabilizing stereo balance.
+The processor subtracts only part of the detected low-band component rather than turning the whole signal down.
+
+## FINISH Stage 3 — dynamic harshness control
+
+The harshness stage follows the same conservative architecture:
+
+1. a broad band-pass is centred around 4.8 kHz,
+2. band energy is compared with broadband energy,
+3. only excessive upper-mid dominance activates reduction,
+4. maximum internal band subtraction is bounded at 25%,
+5. the gain attack is deliberately slower than the detector attack to preserve pick definition,
+6. one shared stereo reduction value keeps double-track balance stable.
+
+The stage is intended to reduce amp-sim harshness/fizz without applying a permanent low-pass filter or removing the useful guitar midrange.
 
 ## Real-time rules
 
@@ -57,7 +70,8 @@ The standalone DSP smoke test checks:
 - expected attenuation around 80 Hz,
 - expected attenuation around 300 Hz,
 - preservation of the useful midrange around 1 kHz,
-- activation of dynamic low-end control on sustained low-frequency material,
-- release/recovery when the input moves back into the guitar midrange.
+- controlled attenuation around 4.8 kHz,
+- preservation of upper treble around 8 kHz,
+- activation and release of both dynamic controllers.
 
 DAW/host validation remains a separate layer and must be performed on built VST3 bundles.

@@ -81,6 +81,28 @@ inline BiquadCoefficients makeLowPass(double sampleRate,
     };
 }
 
+inline BiquadCoefficients makeBandPass(double sampleRate,
+                                       double frequency,
+                                       double q) noexcept {
+    constexpr double pi = 3.141592653589793238462643383279502884;
+    const double fs = std::max(sampleRate, 1000.0);
+    const double f = std::clamp(frequency, 10.0, fs * 0.45);
+    const double qq = std::max(q, 0.05);
+    const double w0 = 2.0 * pi * f / fs;
+    const double cosW0 = std::cos(w0);
+    const double sinW0 = std::sin(w0);
+    const double alpha = sinW0 / (2.0 * qq);
+
+    const double a0 = 1.0 + alpha;
+    return {
+        alpha / a0,
+        0.0,
+        -alpha / a0,
+        -2.0 * cosW0 / a0,
+        (1.0 - alpha) / a0
+    };
+}
+
 inline BiquadCoefficients makePeaking(double sampleRate,
                                       double frequency,
                                       double q,

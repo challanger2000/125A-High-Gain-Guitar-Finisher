@@ -12,6 +12,7 @@ void MetalFinisherDSP::prepare(double sampleRate) noexcept {
 
     updateFilters();
     dynamicLowEnd_.prepare(sampleRate_);
+    dynamicHarshness_.prepare(sampleRate_);
     reset();
 }
 
@@ -22,6 +23,7 @@ void MetalFinisherDSP::reset() noexcept {
     }
 
     dynamicLowEnd_.reset();
+    dynamicHarshness_.reset();
 }
 
 void MetalFinisherDSP::setFinish(double normalized) noexcept {
@@ -65,6 +67,7 @@ void MetalFinisherDSP::processFrame(double& left,
             channels_[1].highPass.process(right));
 
     dynamicLowEnd_.processFrame(wetLeft, wetRight);
+    dynamicHarshness_.processFrame(wetLeft, wetRight);
 
     left = dryLeft + (wetLeft - dryLeft) * finish_;
     right = dryRight + (wetRight - dryRight) * finish_;

@@ -16,6 +16,10 @@ set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VSTGUI_SUPPORT OFF CACHE BOOL "" FORCE)
 set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
 
+# CI/builds should create the bundle only, not install/link it into the
+# current user's VST3 folder. The artifact staging step handles distribution.
+set(SMTG_CREATE_PLUGIN_LINK OFF CACHE BOOL "" FORCE)
+
 include(FetchContent)
 
 FetchContent_Declare(

@@ -5,7 +5,7 @@ set(HGGF_DSP_SOURCES
 
 add_executable(HighGainGuitarFinisherDSPTests
     dsp_smoke.cpp
-    \${HGGF_DSP_SOURCES}
+    ${HGGF_DSP_SOURCES}
 )
 
 target_include_directories(HighGainGuitarFinisherDSPTests
@@ -30,7 +30,7 @@ add_test(
 
 add_executable(HighGainGuitarFinisherAdaptiveTests
     adaptive_fixture_tests.cpp
-    \${HGGF_DSP_SOURCES}
+    ${HGGF_DSP_SOURCES}
 )
 
 target_include_directories(
@@ -56,7 +56,7 @@ add_test(
 
 add_executable(HighGainGuitarFinisherMeasurements
     measurement_suite.cpp
-    \${HGGF_DSP_SOURCES}
+    ${HGGF_DSP_SOURCES}
 )
 
 target_include_directories(
@@ -83,7 +83,7 @@ add_test(
 
 add_executable(HighGainGuitarFinisherLatencyImpulse
     latency_impulse.cpp
-    \${HGGF_DSP_SOURCES}
+    ${HGGF_DSP_SOURCES}
 )
 
 target_include_directories(

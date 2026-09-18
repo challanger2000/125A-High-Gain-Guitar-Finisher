@@ -56,6 +56,7 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
     finisher_.prepare(sampleRate_);
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
+    finisher_.setRoom(room_);
     lastBypassed_ = bypass_ >= 0.5;
 
     return AudioEffect::setupProcessing(setup);
@@ -133,6 +134,7 @@ void Processor::processBlock(
 
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
+    finisher_.setRoom(room_);
 
     for (int32 sample = 0; sample < numSamples; ++sample) {
         const Sample* inputLeft = inputs[0];
@@ -302,6 +304,7 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
 
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
+    finisher_.setRoom(room_);
     finisher_.reset();
     lastBypassed_ = bypass_ >= 0.5;
 

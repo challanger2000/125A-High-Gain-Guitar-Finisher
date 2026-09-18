@@ -17,11 +17,11 @@ It is **not** intended as an all-purpose processor for clean, acoustic, western 
 
 ## Current development status
 
-**0.1.0 bootstrap**
+**0.1.0 development bootstrap**
 
-The project currently provides a clean VST3 foundation with stereo I/O, 32/64-bit processing support, automation/state handling and the public parameter structure.
+The VST3 foundation provides stereo I/O, 32/64-bit processing support, automation/state handling and the public parameter structure.
 
-FINISH and ROOM are intentionally neutral until their DSP is designed, measured and listening-tested. OUTPUT and BYPASS are already functional.
+The first measured FINISH stage is implemented as conservative low-end tightening plus broad low-mid cleanup. `FINISH = 0` remains exactly transparent. ROOM is intentionally neutral until its dedicated industrial ambience is designed and listening-tested.
 
 ## Build
 
@@ -32,6 +32,6 @@ FINISH and ROOM are intentionally neutral until their DSP is designed, measured 
 
 The repository does not depend on or modify a global VST3 SDK installation.
 
-A manual GitHub Actions workflow is provided under **Build Windows VST3**. It runs only when explicitly started, so commits do not consume Actions minutes automatically.
+A manual GitHub Actions workflow is provided under **Build Windows VST3**. It builds the plugin, runs the standalone DSP tests and uploads the VST3 bundle. It runs only when explicitly started, so commits do not consume Actions minutes automatically.
 
-See [docs/DSP_PLAN.md](docs/DSP_PLAN.md) for the current DSP direction.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for project structure and [docs/DSP_PLAN.md](docs/DSP_PLAN.md) for the DSP direction.

@@ -4,6 +4,9 @@ set(HIGH_GAIN_GUITAR_FINISHER_SOURCES
     HighGainGuitarFinisherProcessor.cpp
     HighGainGuitarFinisherController.h
     HighGainGuitarFinisherController.cpp
+    dsp/Biquad.h
+    dsp/MetalFinisherDSP.h
+    dsp/MetalFinisherDSP.cpp
     entry.cpp
 )
 
@@ -15,6 +18,9 @@ target_link_libraries(HighGainGuitarFinisher
     PRIVATE
         sdk
 )
+
+target_compile_features(HighGainGuitarFinisher PRIVATE cxx_std_17)
+hggf_enable_project_warnings(HighGainGuitarFinisher)
 
 if(WIN32)
     target_sources(HighGainGuitarFinisher PRIVATE

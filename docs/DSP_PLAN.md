@@ -11,23 +11,31 @@ Its job is not to replace the amp or cabinet. Its job is to move an already usab
 - **FINISH** — main macro from untreated post-amp/cab tone toward the finished metal target.
 - **ROOM** — dedicated short industrial/metal guitar ambience. Not a general-purpose reverb.
 - **OUTPUT** — final level trim.
-- **BYPASS** — true processing bypass at unity.
+- **BYPASS** — unity processing bypass.
 
-## Planned FINISH building blocks
+## FINISH roadmap
 
-The final algorithm may combine several measured/adaptive stages:
+### Stage 1 — implemented
 
-1. low-end tightening for palm mutes,
-2. low-mid mud control,
-3. dynamic resonance suppression,
-4. fizz/harshness control,
-5. body stabilization,
-6. attack/presence shaping,
-7. subtle harmonic cohesion,
-8. peak control,
-9. loudness-aware compensation.
+- low-end tightening,
+- broad low-mid cleanup around the 300 Hz region,
+- exact transparency at FINISH = 0,
+- standalone frequency-response smoke tests.
 
-These are design goals, not promises that each stage will remain in the final DSP.
+### Candidate later stages
+
+Only add these after measurement and listening tests demonstrate a real benefit:
+
+1. dynamic palm-mute control,
+2. dynamic resonance suppression,
+3. fizz/harshness control,
+4. body stabilization,
+5. attack/presence shaping,
+6. subtle harmonic cohesion,
+7. peak control,
+8. loudness-aware compensation.
+
+These are design candidates, not promises that every stage will remain in the final DSP.
 
 ## Planned ROOM direction
 
@@ -53,9 +61,4 @@ Candidate ingredients:
 - Do not add oversampling unless measurements show a nonlinear stage actually benefits from it.
 - Measure latency and report it correctly if any future stage introduces latency.
 - Keep bypass unity and free of intentional coloration.
-
-## Bootstrap status
-
-Version 0.1.0 contains the VST3 framework, stereo I/O, state handling and the four public parameters.
-
-FINISH and ROOM are intentionally DSP-neutral in the bootstrap build. OUTPUT and BYPASS are functional.
+- Keep DSP code independent from the VST3 SDK wherever practical.

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
+#include "dsp/MetalFinisherDSP.h"
 
 namespace HighGainGuitarFinisher {
 
@@ -23,6 +24,15 @@ public:
     Steinberg::tresult PLUGIN_API canProcessSampleSize(
         Steinberg::int32 symbolicSampleSize) override;
 
+    Steinberg::tresult PLUGIN_API setupProcessing(
+        Steinberg::Vst::ProcessSetup& setup) override;
+
+    Steinberg::tresult PLUGIN_API setActive(
+        Steinberg::TBool state) override;
+
+    Steinberg::tresult PLUGIN_API setProcessing(
+        Steinberg::TBool state) override;
+
     Steinberg::tresult PLUGIN_API process(
         Steinberg::Vst::ProcessData& data) override;
 
@@ -41,9 +51,11 @@ private:
                       Steinberg::int32 numSamples,
                       Steinberg::int32 numChannels);
 
+    dsp::MetalFinisherDSP finisher_ {};
+    double sampleRate_ {44100.0};
     double finish_ {0.0};
     double room_ {0.0};
-    double output_ {0.5}; // normalized: -12 dB .. +12 dB, 0.5 = 0 dB
+    double output_ {0.5};
     double bypass_ {0.0};
 };
 

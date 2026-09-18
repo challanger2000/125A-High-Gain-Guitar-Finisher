@@ -14,8 +14,11 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 
-      - name: Build plugin
-        run: cmake --build build --config Release --target HighGainGuitarFinisher --parallel
+      - name: Build plugin and tests
+        run: cmake --build build --config Release --target HighGainGuitarFinisher HighGainGuitarFinisherDSPTests --parallel
+
+      - name: Run DSP tests
+        run: ctest --test-dir build -C Release --output-on-failure
 
       - name: Stage VST3 bundle
         shell: pwsh

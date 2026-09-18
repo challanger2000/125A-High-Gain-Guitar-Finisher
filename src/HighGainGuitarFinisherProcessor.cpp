@@ -48,6 +48,28 @@ tresult PLUGIN_API Processor::canProcessSampleSize(int32 symbolicSampleSize) {
         : kResultFalse;
 }
 
+tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
+    sampleRate_ = (std::isfinite(setup.sampleRate) && setup.sampleRate > 1000.0)
+        ? setup.sampleRate
+        : 44100.0;
+
+    finisher_.prepare(sampleRate_);
+    finisher_.setFinish(finish_);
+    return AudioEffect::setupProcessing(setup);
+}
+
+tresult PLUGIN_API Processor::setActive(TBool state) {
+    if (state)
+        finisher_.reset();
+    return AudioEffect::setActive(state);
+}
+
+tresult PLUGIN_API Processor::setProcessing(TBool state) {
+    if (state)
+        finisher_.reset();
+    return AudioEffect::setProcessing(state);
+}
+
 void Processor::readParameterChanges(IParameterChanges* changes) {
     if (!changes)
         return;
@@ -85,28 +107,32 @@ void Processor::processBlock(
     int32 numChannels) {
 
     const bool bypassed = bypass_ >= 0.5;
-
-    // OUTPUT is already functional. FINISH and ROOM are deliberately DSP-neutral
-    // in the bootstrap build until their algorithms are designed and measured.
     const double outputDb = (output_ * 24.0) - 12.0;
     const double outputGain = bypassed ? 1.0 : std::pow(10.0, outputDb / 20.0);
 
-    for (int32 channel = 0; channel < numChannels; ++channel) {
-        const Sample* input = inputs[channel];
-        Sample* output = outputs[channel];
+    finisher_.setFinish(finish_);
 
-        if (!output)
-            continue;
+    for (int32 sample = 0; sample < numSamples; ++sample) {
+        for (int32 channel = 0; channel < numChannels; ++channel) {
+            const Sample* input = inputs[channel];
+            Sample* output = outputs[channel];
 
-        if (!input) {
-            std::fill(output, output + numSamples, static_cast<Sample>(0));
-            continue;
-        }
+            if (!output)
+                continue;
 
-        for (int32 sample = 0; sample < numSamples; ++sample) {
-            const double x = static_cast<double>(input[sample]);
-            const double y = std::isfinite(x) ? x * outputGain : 0.0;
-            output[sample] = static_cast<Sample>(y);
+            const double x = input ? static_cast<double>(input[sample]) : 0.0;
+            if (!std::isfinite(x)) {
+                output[sample] = static_cast<Sample>(0);
+                continue;
+            }
+
+            // ROOM remains deliberately neutral until the dedicated industrial
+            // ambience is designed and listening-tested.
+            const double finished = bypassed
+                ? x
+                : finisher_.processSample(channel, x);
+
+            output[sample] = static_cast<Sample>(finished * outputGain);
         }
     }
 }
@@ -117,9 +143,9 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
     if (data.numInputs == 0 || data.numOutputs == 0 || data.numSamples <= 0)
         return kResultOk;
 
-    const int32 numChannels = std::min(
-        data.inputs[0].numChannels,
-        data.outputs[0].numChannels);
+    const int32 numChannels = std::min<int32>(
+        2,
+        std::min(data.inputs[0].numChannels, data.outputs[0].numChannels));
 
     if (numChannels <= 0)
         return kResultOk;
@@ -140,7 +166,37 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
         return kResultFalse;
     }
 
-    data.outputs[0].silenceFlags = data.inputs[0].silenceFlags;
+    bool silent = true;
+    if (data.symbolicSampleSize == kSample32) {
+        for (int32 channel = 0; channel < numChannels && silent; ++channel) {
+            const auto* output = data.outputs[0].channelBuffers32[channel];
+            if (!output)
+                continue;
+            for (int32 sample = 0; sample < data.numSamples; ++sample) {
+                if (output[sample] != 0.0f) {
+                    silent = false;
+                    break;
+                }
+            }
+        }
+    } else {
+        for (int32 channel = 0; channel < numChannels && silent; ++channel) {
+            const auto* output = data.outputs[0].channelBuffers64[channel];
+            if (!output)
+                continue;
+            for (int32 sample = 0; sample < data.numSamples; ++sample) {
+                if (output[sample] != 0.0) {
+                    silent = false;
+                    break;
+                }
+            }
+        }
+    }
+
+    data.outputs[0].silenceFlags = silent
+        ? ((Steinberg::uint64 {1} << numChannels) - 1)
+        : 0;
+
     return kResultOk;
 }
 
@@ -165,6 +221,7 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
     room_ = values[1];
     output_ = values[2];
     bypass_ = values[3];
+    finisher_.setFinish(finish_);
 
     return kResultOk;
 }

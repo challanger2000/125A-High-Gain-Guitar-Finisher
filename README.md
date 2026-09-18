@@ -10,43 +10,46 @@ It is **not** intended as an all-purpose processor for clean, acoustic, western 
 
 ## Core controls
 
-- **FINISH** — main adaptive metal-finishing macro.
-- **LOW CUT 80 Hz** — optional fixed 80 Hz high-pass. Off by default.
-- **ROOM** — dedicated short industrial/metal guitar ambience.
+- **FINISH** — adaptive metal-finishing macro.
+- **ROOM** — short industrial guitar room, not a conventional long reverb.
+- **LOW CUT 80 Hz** — optional fixed 80 Hz high-pass, off by default.
 - **OUTPUT** — final output trim.
 - **BYPASS** — unity bypass.
 
 ## Current development status
 
-**0.1.0 development**
+FINISH uses adaptive low-end, body and harshness analysis rather than one fixed EQ recipe. A bounded internal Auto Level stage removes loudness bias without matching peaks.
 
-The VST3 foundation provides stereo I/O, 32/64-bit processing support, automation/state handling and backward-compatible state migration.
+ROOM is now implemented as a deliberately short, dark and stereo-safe ambience for high-gain guitars:
 
-FINISH is adaptive rather than one fixed EQ recipe. The DSP continuously measures the incoming guitar and searches separate low-end, body and harshness regions. Frequency selection is smoothed and stereo-linked.
+- first reflections begin around 11-13 ms,
+- a four-line feedback delay network creates a dense short tail,
+- the wet path is high-passed to avoid low-end mud,
+- upper frequencies are damped for a darker room character,
+- stereo width is restrained for mono compatibility,
+- fixed ducking keeps the room behind strong pick and palm-mute attacks,
+- ROOM controls both wet amount and decay density as one macro.
 
-A bounded internal auto-level stage now compares the signal immediately before and after FINISH. It restores only measured FINISH loudness loss, with slow programme tracking, silence reset and a maximum makeup limit of +1.5 dB. The optional 80 Hz low cut is excluded from that comparison, so the fixed high-pass is never compensated away.
+At ROOM = 0 the room path contributes exactly zero wet signal.
 
-LOW CUT 80 Hz remains a deliberate user choice and is off by default.
-
-ROOM remains intentionally neutral until its dedicated industrial ambience is designed and listening-tested.
-
-## Build and validation
-
-- Windows x64
-- Visual Studio 2022
-- CMake 3.25+
-- Steinberg VST3 SDK **3.8.1**, pinned to v3.8.1_build_84 through CMake FetchContent
-
-The repository does not depend on or modify a global VST3 SDK installation.
+## Validation
 
 The manual **Build Windows VST3** workflow builds the plugin and runs:
 
 - DSP smoke tests,
 - adaptive multi-signature fixtures,
-- dedicated auto-level tests,
+- Auto Level tests,
+- dedicated ROOM impulse/decay/stereo/spectral metrology,
 - tonal/RMS/stereo measurements,
 - impulse/latency validation.
 
-The workflow runs only when explicitly started, so commits do not consume Actions minutes automatically.
+All test guards are runtime-enforced in Release builds.
 
-See docs/ARCHITECTURE.md, docs/DSP_PLAN.md and docs/MEASUREMENT_STRATEGY.md for the engineering details.
+## Build
+
+- Windows x64
+- Visual Studio 2022
+- CMake 3.25+
+- Steinberg VST3 SDK 3.8.1, pinned through CMake FetchContent
+
+See docs/ARCHITECTURE.md, docs/DSP_PLAN.md and docs/MEASUREMENT_STRATEGY.md for engineering details.

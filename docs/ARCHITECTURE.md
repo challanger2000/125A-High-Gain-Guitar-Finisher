@@ -1,105 +1,98 @@
 # Architecture
 
-## Design goals
-
-The project is intentionally split into a thin VST3 integration layer and reusable DSP code.
-
-- src/HighGainGuitarFinisherProcessor.* owns VST3 audio I/O, automation/state handoff and lifecycle.
-- src/HighGainGuitarFinisherController.* owns public parameters and controller state.
-- src/dsp/ contains audio algorithms with no dependency on the VST3 SDK.
-- tests/ validates DSP behaviour independently from a DAW.
-- docs/ records design intent and engineering decisions.
-
 ## Current signal path
 
-Stereo In -> optional 80 Hz Low Cut -> adaptive FINISH analysis/processing -> bounded Auto Level -> ROOM placeholder -> OUTPUT -> Stereo Out
+Stereo In -> optional 80 Hz Low Cut -> adaptive FINISH -> bounded Auto Level -> ROOM -> OUTPUT -> Stereo Out
 
 BYPASS skips intentional processing and output trim so bypass remains unity.
 
-## Adaptive FINISH architecture
+## Adaptive FINISH
 
-The former fixed 85 Hz high-pass, fixed 300 Hz cut and fixed 4.8 kHz harshness centre have been removed from the default FINISH path.
+FINISH uses three stereo-linked adaptive search banks:
 
-FINISH now uses three adaptive search banks.
+- low/palm-mute region: approximately 85, 110, 145 and 180 Hz,
+- body resonance region: approximately 220, 300, 390 and 500 Hz,
+- harshness region: approximately 3.2, 4.2, 5.4 and 6.8 kHz.
 
-### 1. Low-end / palm-mute search
+The search frequencies are analysis anchors, not a universal target EQ.
 
-Candidate centres cover approximately 85, 110, 145 and 180 Hz.
+## Auto Level
 
-The controller compares fast band energy against a slower learned baseline. It reacts to low-frequency rises characteristic of palm-mute thump rather than applying one permanent low-frequency cut.
+Auto Level compares broadband energy immediately before and after FINISH.
 
-### 2. Body resonance search
+Safeguards:
 
-Candidate centres cover approximately 220, 300, 390 and 500 Hz.
-
-A slowly learned spectral profile identifies a locally dominant body/low-mid resonance. Broad, balanced body energy is intentionally left alone.
-
-### 3. Harshness search
-
-Candidate centres cover approximately 3.2, 4.2, 5.4 and 6.8 kHz.
-
-The controller can react to both short upper-mid bursts and persistent local resonances. It does not use a permanent low-pass filter.
-
-## Auto-level compensation
-
-Auto Level is internal rather than a user-facing loudness effect.
-
-It compares broadband stereo energy immediately before FINISH against the post-FINISH result.
-
-Current safeguards:
-
-- approximately 500 ms programme-energy tracking,
-- approximately 750 ms makeup rise,
-- faster return toward unity when less compensation is needed,
-- +1.5 dB hard maximum,
-- no negative makeup: it does not turn a louder result down,
-- independent activity detector and silence reset,
+- slow programme-energy tracking,
+- slow makeup rise,
+- faster return toward unity,
+- maximum makeup +1.5 dB,
+- no negative makeup,
+- silence reset,
 - exact unity reset at FINISH = 0.
 
-The reference point is after LOW CUT 80 Hz. Therefore the optional fixed high-pass remains intentional and is never compensated away.
+The optional 80 Hz low cut is outside the compensation comparison and is therefore never undone.
 
-The purpose is comparison fairness, not dynamics processing. Individual transients and peaks are deliberately not matched.
+## ROOM architecture
 
-## Search grids are not target EQ curves
+ROOM is intentionally a short industrial guitar ambience rather than a general-purpose reverb.
 
-The candidate frequencies are measurement probes and processing anchors, not universal correction values.
+### Early reflections
 
-Each bank measures its candidates continuously, selects the region that best matches the current source and crossfades the selection over time. Selection hysteresis prevents neighbouring bands from chattering.
+Four asymmetric stereo reflection taps start around 11-13 ms and extend to roughly 41 ms.
 
-The fixed numeric values that remain are safety boundaries: search ranges, time constants and maximum internal reduction.
+Cross-channel taps and alternating polarity increase density without making the first reflections sound like a simple slap delay.
 
-## Optional 80 Hz low cut
+### Late field
 
-LOW CUT 80 Hz is a separate user choice and is off by default.
+A four-line feedback delay network uses approximately:
 
-It uses a second-order high-pass at 80 Hz and is smoothly crossfaded when switched. It is independent from FINISH.
+- 47.9 ms,
+- 59.3 ms,
+- 71.1 ms,
+- 83.7 ms.
 
-## State compatibility
+A normalized Hadamard-style feedback matrix diffuses energy between the four lines.
 
-State version 2 appends the Low Cut parameter after the original four serialized values.
+ROOM changes the feedback from roughly 0.48 toward 0.66 as the macro increases. This keeps low ROOM values tight and lets the maximum setting bloom without becoming a long ambient reverb.
 
-Version 1 states remain readable. When an old state is loaded, LOW CUT 80 Hz defaults to Off.
+### Wet-path tone
 
-Auto Level adds no serialized parameter and therefore requires no new state version.
+The room input is high-passed around 180 Hz so palm-mute and bass energy do not accumulate in the tail.
+
+The feedback network is damped around 5.2 kHz and the final wet signal is low-passed around 6.2 kHz.
+
+### Stereo and mono behaviour
+
+The wet signal is converted to mid/side internally and the side component is limited to 72% of its raw value.
+
+This preserves decorrelation while retaining useful mono energy.
+
+### Ducking
+
+A fast-attack, slower-release envelope follows the processed guitar.
+
+Strong guitar events can reduce the wet path by up to roughly 42%. The reverb therefore stays behind the pick attack and blooms into the spaces between notes.
+
+### ROOM macro
+
+ROOM simultaneously controls wet level and tail density.
+
+Maximum nominal wet gain is 0.22 before ducking. ROOM = 0 returns exactly zero wet signal and eventually clears the tail state.
+
+ROOM is placed after FINISH and Auto Level, so the FINISH loudness compensator does not attempt to cancel the intended ambience.
+
+## State and lifecycle
+
+ROOM already existed as a serialized public parameter, so implementing its DSP requires no state-version change.
+
+DSP state is reset on host activation, processing restart, state load and bypass transitions.
 
 ## Real-time rules
 
-The audio callback must not allocate memory, lock a mutex, access files, log, or perform GUI work.
+The audio callback performs no file access, logging or locking.
 
-Adaptive filter banks, envelopes and Auto Level use preallocated fixed-size state only.
+ROOM delay buffers are allocated during prepare, never during sample processing.
 
 ## Validation
 
-The automated suite checks:
-
-- exact transparency at FINISH = 0 with LOW CUT off,
-- optional 80 Hz low-cut response,
-- finite output from 44.1 to 192 kHz,
-- adaptive frequency movement between substantially different synthetic guitar signatures,
-- bounded Auto Level over several sample rates,
-- Auto Level silence/reset behaviour,
-- RMS/crest/spectral guardrails,
-- stereo-correlation stability,
-- impulse response and zero-lookahead latency.
-
-DAW/host validation remains a separate layer and must still be performed on built VST3 bundles.
+Release-build tests now use explicit runtime checks rather than C assert, so guard failures remain active even when NDEBUG is defined.

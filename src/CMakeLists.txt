@@ -7,6 +7,8 @@ set(HIGH_GAIN_GUITAR_FINISHER_SOURCES
     dsp/Biquad.h
     dsp/AdaptiveBandController.h
     dsp/AdaptiveBandController.cpp
+    dsp/AutoLevelCompensator.h
+    dsp/AutoLevelCompensator.cpp
     dsp/MetalFinisherDSP.h
     dsp/MetalFinisherDSP.cpp
     entry.cpp

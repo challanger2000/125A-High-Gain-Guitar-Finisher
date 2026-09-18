@@ -1,5 +1,6 @@
 set(HGGF_DSP_SOURCES
     ../src/dsp/AdaptiveBandController.cpp
+    ../src/dsp/AutoLevelCompensator.cpp
     ../src/dsp/MetalFinisherDSP.cpp
 )
 
@@ -52,6 +53,32 @@ hggf_enable_project_warnings(
 add_test(
     NAME HighGainGuitarFinisher.DSP.Adaptive
     COMMAND HighGainGuitarFinisherAdaptiveTests
+)
+
+add_executable(HighGainGuitarFinisherAutoLevelTests
+    auto_level_tests.cpp
+    ${HGGF_DSP_SOURCES}
+)
+
+target_include_directories(
+    HighGainGuitarFinisherAutoLevelTests
+    PRIVATE
+        ../src/dsp
+)
+
+target_compile_features(
+    HighGainGuitarFinisherAutoLevelTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherAutoLevelTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.DSP.AutoLevel
+    COMMAND HighGainGuitarFinisherAutoLevelTests
 )
 
 add_executable(HighGainGuitarFinisherMeasurements

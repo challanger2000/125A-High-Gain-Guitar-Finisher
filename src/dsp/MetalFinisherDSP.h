@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AdaptiveBandController.h"
+#include "AutoLevelCompensator.h"
 #include "Biquad.h"
 
 #include <array>
@@ -29,6 +30,10 @@ public:
         return harshness_.currentReduction();
     }
 
+    double currentAutoLevelGainDb() const noexcept {
+        return autoLevel_.currentGainDb();
+    }
+
     double detectedLowFrequency() const noexcept {
         return lowEnd_.selectedFrequency();
     }
@@ -47,6 +52,7 @@ private:
     AdaptiveBandController lowEnd_ {};
     AdaptiveBandController body_ {};
     AdaptiveBandController harshness_ {};
+    AutoLevelCompensator autoLevel_ {};
 
     double sampleRate_ {44100.0};
     double finish_ {0.0};

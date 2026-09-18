@@ -12,7 +12,7 @@ using HighGainGuitarFinisher::dsp::MetalFinisherDSP;
 namespace {
 
 constexpr double sampleRate = 48000.0;
-constexpr int seconds = 4;
+constexpr int seconds = 6;
 constexpr std::size_t sampleCount =
     static_cast<std::size_t>(sampleRate * seconds);
 
@@ -71,7 +71,8 @@ void makeReference(
 void process(
     std::vector<double>& left,
     std::vector<double>& right,
-    double finish) {
+    double finish,
+    double& finalMakeupDb) {
 
     MetalFinisherDSP dsp;
     dsp.prepare(sampleRate);
@@ -80,6 +81,9 @@ void process(
 
     for (std::size_t i = 0; i < left.size(); ++i)
         dsp.processFrame(left[i], right[i]);
+
+    finalMakeupDb =
+        dsp.currentAutoLevelGainDb();
 }
 
 std::vector<double> monoFromStereo(
@@ -106,7 +110,14 @@ int main() {
 
     auto bypassLeft = inputLeft;
     auto bypassRight = inputRight;
-    process(bypassLeft, bypassRight, 0.0);
+
+    double bypassMakeupDb = 0.0;
+
+    process(
+        bypassLeft,
+        bypassRight,
+        0.0,
+        bypassMakeupDb);
 
     assert(
         HGGFTests::nullPeak(inputLeft, bypassLeft) ==
@@ -116,9 +127,18 @@ int main() {
         HGGFTests::nullPeak(inputRight, bypassRight) ==
         0.0);
 
+    assert(bypassMakeupDb == 0.0);
+
     auto outputLeft = inputLeft;
     auto outputRight = inputRight;
-    process(outputLeft, outputRight, 1.0);
+
+    double makeupDb = 0.0;
+
+    process(
+        outputLeft,
+        outputRight,
+        1.0,
+        makeupDb);
 
     const auto inputMetrics =
         HGGFTests::measureStereo(
@@ -178,15 +198,20 @@ int main() {
     assert(std::isfinite(outputMetrics.correlation));
     assert(std::isfinite(outputMetrics.crestDb));
 
-    assert(rmsDelta > -2.0);
-    assert(rmsDelta < 1.0);
-    assert(subDelta > -2.0);
-    assert(bodyDelta > -1.0);
-    assert(midsDelta > -1.0);
-    assert(presenceDelta > -1.5);
+    // Auto-level must remove loudness bias without forcing exact peak matching.
+    assert(rmsDelta > -0.25);
+    assert(rmsDelta < 0.15);
+    assert(makeupDb >= 0.0);
+    assert(makeupDb <= 1.5001);
 
-    assert(lowDelta < -0.4);
-    assert(upperMidsDelta < -0.2);
+    // Adaptive spectral work must remain selective after broadband makeup.
+    assert(subDelta > -1.5);
+    assert(bodyDelta > -0.8);
+    assert(midsDelta > -0.8);
+    assert(presenceDelta > -1.0);
+
+    assert(lowDelta < -0.15);
+    assert(upperMidsDelta < 0.10);
 
     assert(
         std::abs(
@@ -196,6 +221,8 @@ int main() {
     std::cout
         << "Measurement suite passed\n"
         << "RMS delta: " << rmsDelta << " dB\n"
+        << "Auto-level makeup: "
+        << makeupDb << " dB\n"
         << "Crest input/output: "
         << inputMetrics.crestDb << " / "
         << outputMetrics.crestDb << " dB\n"

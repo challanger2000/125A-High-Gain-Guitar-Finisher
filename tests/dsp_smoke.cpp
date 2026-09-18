@@ -1,6 +1,6 @@
-#include "support/TestSupport.h"\n#include "MetalFinisherDSP.h"
+#include "support/TestSupport.h"
+#include "MetalFinisherDSP.h"
 
-#include <cassert>
 #include <cmath>
 #include <iostream>
 

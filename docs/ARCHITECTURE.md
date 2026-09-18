@@ -4,74 +4,80 @@
 
 The project is intentionally split into a thin VST3 integration layer and reusable DSP code.
 
-- `src/HighGainGuitarFinisherProcessor.*` owns VST3 audio I/O, automation/state handoff and lifecycle.
-- `src/HighGainGuitarFinisherController.*` owns public parameters and controller state.
-- `src/dsp/` contains audio algorithms with no dependency on the VST3 SDK.
-- `tests/` validates DSP behaviour independently from a DAW.
-- `docs/` records design intent and engineering decisions.
+- src/HighGainGuitarFinisherProcessor.* owns VST3 audio I/O, automation/state handoff and lifecycle.
+- src/HighGainGuitarFinisherController.* owns public parameters and controller state.
+- src/dsp/ contains audio algorithms with no dependency on the VST3 SDK.
+- tests/ validates DSP behaviour independently from a DAW.
+- docs/ records design intent and engineering decisions.
 
 ## Current signal path
 
-`Stereo In -> static cleanup -> dynamic low-end control -> dynamic harshness control -> ROOM (neutral placeholder) -> OUTPUT -> Stereo Out`
+Stereo In -> optional 80 Hz Low Cut -> adaptive FINISH analysis/processing -> ROOM placeholder -> OUTPUT -> Stereo Out
 
 BYPASS skips intentional processing and output trim so bypass remains unity.
 
-## FINISH Stage 1 — static cleanup
+## Adaptive FINISH architecture
 
-The static stage uses one fully designed wet branch:
+The former fixed 85 Hz high-pass, fixed 300 Hz cut and fixed 4.8 kHz harshness centre have been removed from the default FINISH path.
 
-1. second-order high-pass at 85 Hz,
-2. broad peaking cut centred at 300 Hz at -4 dB,
-3. dry/wet interpolation controlled by FINISH.
+FINISH now uses three adaptive search banks.
 
-Keeping the filter coefficients fixed avoids coefficient jumps during FINISH automation. `FINISH = 0` is exactly transparent.
+### 1. Low-end / palm-mute search
 
-## FINISH Stage 2 — dynamic low-end / palm-mute control
+Candidate centres cover approximately 85, 110, 145 and 180 Hz.
 
-The dynamic stage is intentionally level-independent:
+The controller compares fast band energy against a slower learned baseline. It reacts to low-frequency rises characteristic of palm-mute thump rather than applying one permanent low-frequency cut.
 
-1. a stereo detector isolates the low band below roughly 180 Hz,
-2. low-band and broadband envelopes are compared,
-3. low-frequency dominance drives a bounded reduction,
-4. one shared reduction value is applied to both channels,
-5. attack/release smoothing prevents abrupt gain changes.
+### 2. Body resonance search
 
-The processor subtracts only part of the detected low-band component rather than turning the whole signal down.
+Candidate centres cover approximately 220, 300, 390 and 500 Hz.
 
-## FINISH Stage 3 — dynamic harshness control
+A slowly learned spectral profile identifies a locally dominant body/low-mid resonance. Broad, balanced body energy is intentionally left alone. This prevents every guitar from receiving the same 300 Hz cut.
 
-The harshness stage follows the same conservative architecture:
+### 3. Harshness search
 
-1. a broad band-pass is centred around 4.8 kHz,
-2. band energy is compared with broadband energy,
-3. only excessive upper-mid dominance activates reduction,
-4. maximum internal band subtraction is bounded at 25%,
-5. the gain attack is deliberately slower than the detector attack to preserve pick definition,
-6. one shared stereo reduction value keeps double-track balance stable.
+Candidate centres cover approximately 3.2, 4.2, 5.4 and 6.8 kHz.
 
-The stage is intended to reduce amp-sim harshness/fizz without applying a permanent low-pass filter or removing the useful guitar midrange.
+The controller can react to both short upper-mid bursts and persistent local resonances. It does not use a permanent low-pass filter.
+
+## Search grids are not target EQ curves
+
+The candidate frequencies are measurement probes and processing anchors, not universal correction values.
+
+Each bank measures its candidates continuously, selects the region that best matches the current source and crossfades the selection over time. Selection hysteresis prevents neighbouring bands from chattering.
+
+The fixed numeric values that remain are safety boundaries: search ranges, time constants and maximum internal reduction.
+
+## Optional 80 Hz low cut
+
+LOW CUT 80 Hz is a separate user choice and is off by default.
+
+It uses a second-order high-pass at 80 Hz and is smoothly crossfaded when switched. It is independent from FINISH so a fixed production high-pass is never forced onto every guitar.
+
+## State compatibility
+
+State version 2 appends the new Low Cut parameter after the original four serialized values.
+
+Version 1 states remain readable. When an old state is loaded, LOW CUT 80 Hz defaults to Off.
+
+Existing parameter IDs are unchanged; the new parameter is appended with a new ID.
 
 ## Real-time rules
 
 The audio callback must not allocate memory, lock a mutex, access files, log, or perform GUI work.
 
-DSP objects are prepared/reset from the VST3 lifecycle. Runtime processing uses preallocated state only.
-
-## State compatibility
-
-The processor state begins with `kStateVersion`. Public test builds must not silently reorder or reinterpret existing serialized values. Any incompatible state change requires an explicit version migration.
+Adaptive filter banks, envelopes and telemetry use preallocated fixed-size state only.
 
 ## Validation
 
-The standalone DSP smoke test checks:
+The automated suite now checks:
 
-- exact transparency at `FINISH = 0`,
-- finite stereo output,
-- expected attenuation around 80 Hz,
-- expected attenuation around 300 Hz,
-- preservation of the useful midrange around 1 kHz,
-- controlled attenuation around 4.8 kHz,
-- preservation of upper treble around 8 kHz,
-- activation and release of both dynamic controllers.
+- exact transparency at FINISH = 0 with LOW CUT off,
+- optional 80 Hz low-cut response,
+- finite output from 44.1 to 192 kHz,
+- adaptive frequency movement between substantially different synthetic guitar signatures,
+- RMS/crest/spectral guardrails,
+- stereo-correlation stability,
+- impulse response and zero-lookahead latency.
 
-DAW/host validation remains a separate layer and must be performed on built VST3 bundles.
+DAW/host validation remains a separate layer and must still be performed on built VST3 bundles.

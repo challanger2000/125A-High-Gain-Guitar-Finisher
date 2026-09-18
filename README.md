@@ -10,28 +10,40 @@ It is **not** intended as an all-purpose processor for clean, acoustic, western 
 
 ## Core controls
 
-- **FINISH** — main metal-finishing macro.
+- **FINISH** — main adaptive metal-finishing macro.
+- **LOW CUT 80 Hz** — optional fixed 80 Hz high-pass. Off by default.
 - **ROOM** — dedicated short industrial/metal guitar ambience.
 - **OUTPUT** — final output trim.
 - **BYPASS** — unity bypass.
 
 ## Current development status
 
-**0.1.0 development bootstrap**
+**0.1.0 development**
 
-The VST3 foundation provides stereo I/O, 32/64-bit processing support, automation/state handling and the public parameter structure.
+The VST3 foundation provides stereo I/O, 32/64-bit processing support, automation/state handling and backward-compatible state migration.
 
-The first measured FINISH stage is implemented as conservative low-end tightening plus broad low-mid cleanup. `FINISH = 0` remains exactly transparent. ROOM is intentionally neutral until its dedicated industrial ambience is designed and listening-tested.
+FINISH is now adaptive rather than one fixed EQ recipe. The DSP continuously measures the incoming guitar and searches separate low-end, body and harshness regions. Frequency selection is smoothed and stereo-linked. FINISH controls the amount of the resulting adaptive correction.
 
-## Build
+The optional 80 Hz low cut is deliberately separate from the adaptive system, so users can choose a conventional fixed high-pass without forcing it on every guitar.
+
+ROOM remains intentionally neutral until its dedicated industrial ambience is designed and listening-tested.
+
+## Build and validation
 
 - Windows x64
 - Visual Studio 2022
 - CMake 3.25+
-- Steinberg VST3 SDK **3.8.1**, pinned to `v3.8.1_build_84` through CMake FetchContent
+- Steinberg VST3 SDK **3.8.1**, pinned to v3.8.1_build_84 through CMake FetchContent
 
 The repository does not depend on or modify a global VST3 SDK installation.
 
-A manual GitHub Actions workflow is provided under **Build Windows VST3**. It builds the plugin, runs the standalone DSP tests and uploads the VST3 bundle. It runs only when explicitly started, so commits do not consume Actions minutes automatically.
+The manual **Build Windows VST3** workflow builds the plugin and runs:
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for project structure and [docs/DSP_PLAN.md](docs/DSP_PLAN.md) for the DSP direction.
+- DSP smoke tests,
+- adaptive multi-signature fixtures,
+- tonal/RMS/stereo measurements,
+- impulse/latency validation.
+
+The workflow runs only when explicitly started, so commits do not consume Actions minutes automatically.
+
+See docs/ARCHITECTURE.md, docs/DSP_PLAN.md and docs/MEASUREMENT_STRATEGY.md for the engineering details.

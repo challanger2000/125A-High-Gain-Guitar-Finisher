@@ -8,48 +8,54 @@ Its job is not to replace the amp or cabinet. Its job is to move an already usab
 
 ## User-facing controls
 
-- **FINISH** — main macro from untreated post-amp/cab tone toward the finished metal target.
-- **ROOM** — dedicated short industrial/metal guitar ambience. Not a general-purpose reverb.
+- **FINISH** — adaptive main macro.
+- **LOW CUT 80 Hz** — optional conventional high-pass, off by default.
+- **ROOM** — short industrial/metal guitar ambience.
 - **OUTPUT** — final level trim.
 - **BYPASS** — unity processing bypass.
 
-## FINISH roadmap
+## Implemented adaptive foundation
 
-### Stage 1 — implemented
+### Low-end / palm-mute control
 
-- low-end tightening,
-- broad low-mid cleanup around the 300 Hz region,
-- exact transparency at FINISH = 0,
-- standalone frequency-response smoke tests.
+The algorithm learns the source's own low-band baseline and reacts to fast low-frequency excess. It searches multiple low-frequency anchors instead of assuming one tuning.
 
-### Stage 2 — implemented
+### Body stabilization
 
-- stereo-linked dynamic low-end dominance detector,
-- palm-mute-oriented low-band control,
-- attack/release smoothing,
-- no broadband gain reduction,
-- regression tests for activation and recovery.
+The algorithm searches the low-mid/body region for a locally dominant resonance. It does not apply a permanent 300 Hz cut.
 
-### Stage 3 — implemented
+### Harshness / fizz control
 
-- stereo-linked upper-mid dominance detector,
-- dynamic harshness/fizz control around 4.8 kHz,
-- bounded maximum reduction,
-- slower reduction attack to preserve pick definition,
-- no permanent low-pass filter,
-- regression tests for activation, recovery and 8 kHz preservation.
+The algorithm searches several upper-mid regions and reacts to either transient or persistent spectral excess. It no longer assumes that every guitar is harsh at 4.8 kHz.
 
-### Candidate later stages
+### FINISH macro
 
-Only add these after measurement and listening tests demonstrate a real benefit:
+FINISH scales the adaptive wet correction against the measured source. At zero, with LOW CUT off, the audio path remains exactly transparent while the analysis continues learning in the background.
 
-1. body stabilization,
-2. attack/presence shaping,
-3. subtle harmonic cohesion,
-4. peak control,
-5. loudness-aware compensation.
+## Why the system remains bounded
 
-These are design candidates, not promises that every stage will remain in the final DSP.
+Adaptive does not mean unconstrained.
+
+The plugin still uses fixed safety limits for:
+
+- search ranges,
+- maximum reduction,
+- detector attack/release,
+- selection hysteresis,
+- frequency crossfade speed.
+
+These limits prevent unstable self-EQ behaviour and make the processor deterministic enough to test.
+
+## Candidate later stages
+
+Only add these after measurements and listening tests demonstrate a clear benefit:
+
+1. attack/presence shaping,
+2. subtle harmonic cohesion,
+3. peak control,
+4. loudness-aware compensation.
+
+Any nonlinear stage must be measured for harmonic structure and aliasing before oversampling is considered.
 
 ## Planned ROOM direction
 
@@ -60,8 +66,8 @@ Candidate ingredients:
 - short early reflections,
 - dark plate/room hybrid character,
 - controlled metallic density,
-- high-pass/low-pass shaping in the wet path,
-- stereo width limited for mono robustness,
+- wet-path high-pass/low-pass shaping,
+- restrained stereo width for mono robustness,
 - optional ducking from the dry guitar.
 
 ## Engineering rules
@@ -70,9 +76,9 @@ Candidate ingredients:
 - 32-bit and 64-bit sample processing.
 - No hidden global SDK dependency.
 - VST3 SDK pinned per repository.
-- Parameter state must remain backward-compatible after public test builds.
+- Backward-compatible serialized state.
 - Avoid loudness bias when evaluating FINISH.
-- Do not add oversampling unless measurements show a nonlinear stage actually benefits from it.
-- Measure latency and report it correctly if any future stage introduces latency.
+- Do not add oversampling unless measurements show that a nonlinear stage needs it.
+- Measure and report latency if any future stage introduces it.
 - Keep bypass unity and free of intentional coloration.
 - Keep DSP code independent from the VST3 SDK wherever practical.

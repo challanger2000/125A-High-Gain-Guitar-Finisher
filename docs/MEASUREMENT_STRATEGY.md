@@ -4,35 +4,49 @@ The finisher must not be tuned from a single guitar file or by ear alone.
 
 The repository therefore keeps measurement code separate from production DSP and runs deterministic checks on every manually triggered Windows build.
 
-## Borrowed measurement principles
+## Reused measurement principles
 
-The strategy follows measurement patterns already proven in the 125A repositories:
+The strategy follows methods already proven in other 125A repositories.
 
-- **Analysator-Final**
-  - null/transparency checks,
-  - RMS/peak/crest measurement,
-  - stereo correlation and mid/side metrics,
-  - detailed tonal-band energy,
-  - deterministic behaviour across signal partitions,
-  - calibrated loudness/true-peak methodology where those metrics become relevant.
+### Analysator-Final
 
-- **125A-MixEngine**
-  - impulse-response thinking,
-  - explicit latency checks,
-  - roundtrip/regression testing,
-  - alias/oversampling measurement before adding oversampling.
+- null/transparency checks,
+- RMS/peak/crest measurement,
+- stereo correlation and mid/side metrics,
+- detailed tonal-band energy,
+- deterministic analysis,
+- calibrated loudness/true-peak methodology when those metrics become relevant.
 
-The High Gain Guitar Finisher does not depend on those repositories at build time. Only the measurement methods are reused.
+### 125A-MixEngine
+
+- impulse-response thinking,
+- explicit latency checks,
+- roundtrip/regression testing,
+- alias and oversampling measurements before adding oversampling.
+
+The High Gain Guitar Finisher does not depend on those repositories at build time. Only their measurement principles are reused.
 
 ## Current automated measurements
 
-### 1. Exact transparency
+### Exact transparency
 
-At `FINISH = 0`, left and right channels must null exactly against the input.
+With FINISH at zero and LOW CUT 80 Hz off, left and right must null exactly against the input.
 
-### 2. Broad spectral behaviour
+### Adaptive multi-signature fixtures
 
-A deterministic guitar-like stress signal is analysed in the same detailed bands used by the Analysator measurement approach:
+Two deliberately different synthetic high-gain signatures are processed by the same DSP.
+
+The test requires the detected regions to move substantially between them. The present fixture demonstrates movement from approximately:
+
+- low: 85 Hz to 180 Hz,
+- body: 220 Hz to 500 Hz,
+- harshness: 3.2 kHz to 6.8 kHz.
+
+The exact numbers are not product targets. The test exists to prove that the algorithm is not secretly one fixed 300 Hz / 4.8 kHz recipe.
+
+### Tonal-band guardrails
+
+A deterministic guitar-like stress signal is measured in:
 
 - 20-80 Hz
 - 80-250 Hz
@@ -43,23 +57,25 @@ A deterministic guitar-like stress signal is analysed in the same detailed bands
 - 8000-12000 Hz
 - 12000-20000 Hz
 
-These tests use guardrails rather than fixed target curves. Their purpose is to catch unintended broadband damage while the adaptive design evolves.
+The default adaptive path is explicitly guarded against recreating the old heavy fixed sub/body attenuation.
 
-### 3. RMS / peak / crest
+### RMS / peak / crest
 
-Input and processed output are compared so a new DSP stage cannot hide behind simple loudness bias.
+Input and output are compared so a processing change cannot hide behind loudness bias.
 
-### 4. Stereo integrity
+### Stereo integrity
 
-Correlation and mid/side energy are tracked. Stereo-linked adaptive processing must not destabilize the image.
+Correlation and mid/side behaviour are tracked. Stereo-linked adaptive decisions must not destabilize double-tracked guitars.
 
-### 5. Dynamic-controller telemetry
+### Optional 80 Hz low cut
 
-Synthetic low-frequency and harshness fixtures verify that detectors activate and recover as intended.
+The separate switch is measured independently from FINISH.
 
-### 6. Impulse / latency
+The current calibrated smoke test expects strong attenuation at 40 Hz while preserving 1 kHz essentially unchanged.
 
-The current topology has no look-ahead or buffering. The impulse test verifies immediate output and guards against accidental latency introduction.
+### Impulse / latency
+
+The topology currently has no look-ahead or block buffering. The impulse test verifies immediate output and catches accidental latency introduction.
 
 ## Later measurements
 
@@ -82,4 +98,6 @@ Before adding ROOM:
 
 ## Real-world audio
 
-Synthetic tests are regression tools, not the product target. Real high-gain guitar files are still required for listening and offline comparison. Measurements on real audio should be interpreted relative to the source rather than forced toward one universal EQ curve.
+Synthetic fixtures are regression tools, not the product target.
+
+Real high-gain guitar files remain necessary for listening and offline comparison. Their measurements should be interpreted relative to each source rather than forced toward one universal EQ curve.

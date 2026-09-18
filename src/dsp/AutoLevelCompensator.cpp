@@ -33,6 +33,12 @@ void AutoLevelCompensator::prepare(
     energyCoefficient_ =
         timeCoefficient(sampleRate_, 500.0);
 
+    // Independent activity memory closes the gate much faster than the
+    // programme-energy window. This prevents a previous phrase from keeping
+    // stale makeup active through a real pause.
+    activityReleaseCoefficient_ =
+        timeCoefficient(sampleRate_, 80.0);
+
     // Makeup rises slowly so it cannot act like another compressor.
     // It returns to unity faster when the required compensation falls.
     gainUpCoefficient_ =
@@ -54,6 +60,7 @@ void AutoLevelCompensator::prepare(
 void AutoLevelCompensator::reset() noexcept {
     inputEnergy_ = 0.0;
     outputEnergy_ = 0.0;
+    activityEnergy_ = 0.0;
     gain_ = 1.0;
 }
 
@@ -96,9 +103,13 @@ void AutoLevelCompensator::processFrame(
         energyCoefficient_ * outputEnergy_ +
         (1.0 - energyCoefficient_) * outputInstant;
 
+    activityEnergy_ = std::max(
+        inputInstant,
+        activityReleaseCoefficient_ * activityEnergy_);
+
     double targetGain = 1.0;
 
-    if (inputEnergy_ > gateEnergy_) {
+    if (activityEnergy_ > gateEnergy_) {
         const double ratio = std::sqrt(
             (inputEnergy_ + kEpsilon) /
             (outputEnergy_ + kEpsilon));
@@ -109,6 +120,11 @@ void AutoLevelCompensator::processFrame(
             ratio,
             1.0,
             maxGain_);
+    } else {
+        // A genuine pause starts a fresh programme estimate for the next
+        // phrase instead of carrying the previous tone's ratio forward.
+        inputEnergy_ = 0.0;
+        outputEnergy_ = 0.0;
     }
 
     const double coefficient =

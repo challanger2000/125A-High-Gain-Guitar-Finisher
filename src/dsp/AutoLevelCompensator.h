@@ -26,9 +26,11 @@ private:
 
     double inputEnergy_ {0.0};
     double outputEnergy_ {0.0};
+    double activityEnergy_ {0.0};
     double gain_ {1.0};
 
     double energyCoefficient_ {0.0};
+    double activityReleaseCoefficient_ {0.0};
     double gainUpCoefficient_ {0.0};
     double gainDownCoefficient_ {0.0};
 

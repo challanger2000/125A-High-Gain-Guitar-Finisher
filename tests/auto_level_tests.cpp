@@ -1,8 +1,8 @@
-#include "support/TestSupport.h"\n#include "AutoLevelCompensator.h"
+#include "support/TestSupport.h"
+#include "AutoLevelCompensator.h"
 #include "MetalFinisherDSP.h"
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <iostream>
 

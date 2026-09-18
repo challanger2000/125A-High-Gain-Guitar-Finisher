@@ -37,7 +37,7 @@ void MetalFinisherDSP::prepare(double sampleRate) noexcept {
         {3200.0, 4200.0, 5400.0, 6800.0},
         1.0);
 
-    autoLevel_.prepare(sampleRate_);
+    autoLevel_.prepare(sampleRate_);\n    room_.prepare(sampleRate_);
 
     reset();
 }
@@ -63,6 +63,10 @@ void MetalFinisherDSP::setFinish(double normalized) noexcept {
 
 void MetalFinisherDSP::setLowCut80(bool enabled) noexcept {
     lowCutTarget_ = enabled ? 1.0 : 0.0;
+}
+
+void MetalFinisherDSP::setRoom(double normalized) noexcept {
+    room_.setAmount(normalized);
 }
 
 void MetalFinisherDSP::processFrame(
@@ -97,35 +101,64 @@ void MetalFinisherDSP::processFrame(
             ? right + (filteredRight - right) * lowCutMix_
             : right;
 
-    // FINISH = 0 remains exactly transparent. Resetting the auto-level state
-    // here also prevents stale makeup from a previous non-zero FINISH value.
-    if (finish_ <= 0.0) {
+    double processedLeft = baseLeft;
+    double processedRight = baseRight;
+
+    if (finish_ > 0.0) {
+        double finishLeft = baseLeft;
+        double finishRight = baseRight;
+
+        lowEnd_.processFrame(
+            finishLeft,
+            finishRight);
+
+        body_.processFrame(
+            finishLeft,
+            finishRight);
+
+        harshness_.processFrame(
+            finishLeft,
+            finishRight);
+
+        processedLeft =
+            baseLeft +
+            (finishLeft - baseLeft) *
+                finish_;
+
+        processedRight =
+            baseRight +
+            (finishRight - baseRight) *
+                finish_;
+
+        // Compare against the post-low-cut reference so the optional fixed
+        // 80 Hz filter is never "undone" by makeup gain.
+        autoLevel_.processFrame(
+            baseLeft,
+            baseRight,
+            processedLeft,
+            processedRight);
+    } else {
+        // FINISH = 0 remains exact before ROOM. This also prevents stale
+        // makeup from a previous non-zero FINISH value.
         autoLevel_.reset();
-        left = baseLeft;
-        right = baseRight;
-        return;
     }
 
-    double wetLeft = baseLeft;
-    double wetRight = baseRight;
+    double roomLeft = 0.0;
+    double roomRight = 0.0;
 
-    lowEnd_.processFrame(wetLeft, wetRight);
-    body_.processFrame(wetLeft, wetRight);
-    harshness_.processFrame(wetLeft, wetRight);
+    room_.processFrame(
+        processedLeft,
+        processedRight,
+        roomLeft,
+        roomRight);
 
     left =
-        baseLeft + (wetLeft - baseLeft) * finish_;
+        processedLeft +
+        roomLeft;
 
     right =
-        baseRight + (wetRight - baseRight) * finish_;
-
-    // Compare against the post-low-cut reference so the optional fixed
-    // 80 Hz filter is never "undone" by makeup gain.
-    autoLevel_.processFrame(
-        baseLeft,
-        baseRight,
-        left,
-        right);
+        processedRight +
+        roomRight;
 }
 
 } // namespace HighGainGuitarFinisher::dsp

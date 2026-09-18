@@ -137,3 +137,30 @@ add_test(
     NAME HighGainGuitarFinisher.LatencyImpulse
     COMMAND HighGainGuitarFinisherLatencyImpulse
 )
+
+add_executable(HighGainGuitarFinisherRoomTests
+    room_metrology.cpp
+    ../src/dsp/IndustrialRoom.cpp
+)
+
+target_include_directories(
+    HighGainGuitarFinisherRoomTests
+    PRIVATE
+        .
+        ../src/dsp
+)
+
+target_compile_features(
+    HighGainGuitarFinisherRoomTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherRoomTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.DSP.Room
+    COMMAND HighGainGuitarFinisherRoomTests
+)

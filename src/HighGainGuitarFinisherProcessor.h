@@ -13,7 +13,8 @@ public:
         return static_cast<Steinberg::Vst::IAudioProcessor*>(new Processor());
     }
 
-    Steinberg::tresult PLUGIN_API initialize(Steinberg::FUnknown* context) override;
+    Steinberg::tresult PLUGIN_API initialize(
+        Steinberg::FUnknown* context) override;
 
     Steinberg::tresult PLUGIN_API setBusArrangements(
         Steinberg::Vst::SpeakerArrangement* inputs,
@@ -43,7 +44,8 @@ public:
         Steinberg::IBStream* state) override;
 
 private:
-    void readParameterChanges(Steinberg::Vst::IParameterChanges* changes);
+    void readParameterChanges(
+        Steinberg::Vst::IParameterChanges* changes);
 
     template <typename Sample>
     void processBlock(Sample** inputs,
@@ -52,11 +54,13 @@ private:
                       Steinberg::int32 numChannels);
 
     dsp::MetalFinisherDSP finisher_ {};
+
     double sampleRate_ {44100.0};
     double finish_ {0.0};
     double room_ {0.0};
     double output_ {0.5};
     double bypass_ {0.0};
+    double lowCut80_ {0.0};
 };
 
 } // namespace HighGainGuitarFinisher

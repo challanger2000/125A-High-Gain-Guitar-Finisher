@@ -11,13 +11,14 @@ namespace {
 constexpr double pi = 3.141592653589793238462643383279502884;
 constexpr double sampleRate = 48000.0;
 
-double measureGain(double frequency, double finish) {
+double measureLowCutGain(double frequency) {
     constexpr int warmup = 24000;
     constexpr int measured = 48000;
 
     MetalFinisherDSP dsp;
     dsp.prepare(sampleRate);
-    dsp.setFinish(finish);
+    dsp.setFinish(0.0);
+    dsp.setLowCut80(true);
 
     double inputPower = 0.0;
     double outputPower = 0.0;
@@ -46,120 +47,74 @@ void verifyExactTransparency() {
     MetalFinisherDSP dsp;
     dsp.prepare(sampleRate);
     dsp.setFinish(0.0);
+    dsp.setLowCut80(false);
 
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 4000; ++i) {
         const double x =
             std::sin(2.0 * pi * 440.0 * i / sampleRate);
 
         double left = x;
         double right = -x;
-        const double originalLeft = left;
-        const double originalRight = right;
 
         dsp.processFrame(left, right);
 
-        assert(left == originalLeft);
-        assert(right == originalRight);
+        assert(left == x);
+        assert(right == -x);
     }
 }
 
-void verifyDynamicLowEndControl() {
-    MetalFinisherDSP dsp;
-    dsp.prepare(sampleRate);
-    dsp.setFinish(1.0);
+void verifyFiniteAcrossSampleRates() {
+    for (const double rate :
+         {44100.0, 48000.0, 96000.0, 192000.0}) {
 
-    for (int i = 0; i < static_cast<int>(sampleRate); ++i) {
-        const double x =
-            0.8 * std::sin(2.0 * pi * 100.0 * i / sampleRate);
+        MetalFinisherDSP dsp;
+        dsp.prepare(rate);
+        dsp.setFinish(1.0);
 
-        double left = x;
-        double right = x;
-        dsp.processFrame(left, right);
+        for (int i = 0;
+             i < static_cast<int>(rate * 0.25);
+             ++i) {
+
+            const double time =
+                static_cast<double>(i) / rate;
+
+            double left =
+                0.4 * std::sin(2.0 * pi * 110.0 * time) +
+                0.3 * std::sin(2.0 * pi * 4100.0 * time);
+
+            double right =
+                0.4 * std::sin(2.0 * pi * 145.0 * time) +
+                0.3 * std::sin(2.0 * pi * 6200.0 * time);
+
+            dsp.processFrame(left, right);
+
+            assert(std::isfinite(left));
+            assert(std::isfinite(right));
+        }
     }
-
-    const double activeReduction =
-        dsp.currentDynamicLowEndReduction();
-
-    assert(activeReduction > 0.30);
-    assert(activeReduction <= 0.451);
-
-    for (int i = 0; i < static_cast<int>(sampleRate); ++i) {
-        const double x =
-            0.5 * std::sin(2.0 * pi * 2000.0 * i / sampleRate);
-
-        double left = x;
-        double right = x;
-        dsp.processFrame(left, right);
-    }
-
-    const double recoveredReduction =
-        dsp.currentDynamicLowEndReduction();
-
-    assert(recoveredReduction < 0.01);
-}
-
-void verifyDynamicHarshnessControl() {
-    MetalFinisherDSP dsp;
-    dsp.prepare(sampleRate);
-    dsp.setFinish(1.0);
-
-    for (int i = 0; i < static_cast<int>(sampleRate); ++i) {
-        const double x =
-            0.6 * std::sin(2.0 * pi * 4800.0 * i / sampleRate);
-
-        double left = x;
-        double right = x;
-        dsp.processFrame(left, right);
-    }
-
-    const double activeReduction =
-        dsp.currentHarshnessReduction();
-
-    assert(activeReduction > 0.20);
-    assert(activeReduction <= 0.251);
-
-    for (int i = 0; i < static_cast<int>(sampleRate); ++i) {
-        const double x =
-            0.5 * std::sin(2.0 * pi * 1000.0 * i / sampleRate);
-
-        double left = x;
-        double right = x;
-        dsp.processFrame(left, right);
-    }
-
-    const double recoveredReduction =
-        dsp.currentHarshnessReduction();
-
-    assert(recoveredReduction < 0.01);
 }
 
 } // namespace
 
 int main() {
     verifyExactTransparency();
-    verifyDynamicLowEndControl();
-    verifyDynamicHarshnessControl();
+    verifyFiniteAcrossSampleRates();
 
-    const double gain80 = measureGain(80.0, 1.0);
-    const double gain300 = measureGain(300.0, 1.0);
-    const double gain1000 = measureGain(1000.0, 1.0);
-    const double gain4800 = measureGain(4800.0, 1.0);
-    const double gain8000 = measureGain(8000.0, 1.0);
+    const double lowCut40 =
+        measureLowCutGain(40.0);
+    const double lowCut1000 =
+        measureLowCutGain(1000.0);
 
-    assert(gain80 < 0.55);
-    assert(gain300 < 0.75);
-    assert(gain1000 > 0.90);
-    assert(gain1000 < 1.05);
-    assert(gain4800 < 0.80);
-    assert(gain8000 > 0.85);
+    assert(lowCut40 < 0.35);
+    assert(lowCut1000 > 0.99);
+    assert(lowCut1000 < 1.01);
 
     std::cout
         << "DSP smoke test passed\n"
-        << "80 Hz gain: " << gain80 << "\n"
-        << "300 Hz gain: " << gain300 << "\n"
-        << "1 kHz gain: " << gain1000 << "\n"
-        << "4.8 kHz gain: " << gain4800 << "\n"
-        << "8 kHz gain: " << gain8000 << "\n";
+        << "Optional 80 Hz low-cut gain at 40 Hz: "
+        << lowCut40 << "\n"
+        << "Optional 80 Hz low-cut gain at 1 kHz: "
+        << lowCut1000 << "\n";
 
     return 0;
 }

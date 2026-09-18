@@ -1,0 +1,284 @@
+#include "AdaptiveBandController.h"
+
+#include <algorithm>
+#include <cmath>
+
+namespace HighGainGuitarFinisher::dsp {
+
+namespace {
+constexpr double kEpsilon = 1.0e-18;
+}
+
+double AdaptiveBandController::timeCoefficient(
+    double sampleRate,
+    double milliseconds) noexcept {
+
+    const double fs = std::max(sampleRate, 1000.0);
+    const double ms = std::max(milliseconds, 0.01);
+    return std::exp(-1.0 / (fs * ms * 0.001));
+}
+
+void AdaptiveBandController::prepare(
+    double sampleRate,
+    AdaptiveBandMode mode,
+    const Centers& centers,
+    double q) noexcept {
+
+    sampleRate_ = (std::isfinite(sampleRate) && sampleRate > 1000.0)
+        ? sampleRate
+        : 44100.0;
+
+    mode_ = mode;
+    centers_ = centers;
+
+    for (std::size_t channel = 0; channel < filters_.size(); ++channel) {
+        for (std::size_t band = 0; band < kBandCount; ++band) {
+            filters_[channel][band].setCoefficients(
+                makeBandPass(sampleRate_, centers_[band], q));
+        }
+    }
+
+    const double fastAttackMs =
+        mode_ == AdaptiveBandMode::BodyResonance ? 30.0 : 3.0;
+    const double fastReleaseMs =
+        mode_ == AdaptiveBandMode::BodyResonance ? 200.0 : 80.0;
+
+    fastAttack_ = timeCoefficient(sampleRate_, fastAttackMs);
+    fastRelease_ = timeCoefficient(sampleRate_, fastReleaseMs);
+    slowAttack_ = timeCoefficient(sampleRate_, 250.0);
+    slowRelease_ = timeCoefficient(sampleRate_, 900.0);
+
+    wideFastAttack_ = timeCoefficient(sampleRate_, 3.0);
+    wideFastRelease_ = timeCoefficient(sampleRate_, 80.0);
+    wideSlowAttack_ = timeCoefficient(sampleRate_, 250.0);
+    wideSlowRelease_ = timeCoefficient(sampleRate_, 900.0);
+
+    double reductionAttackMs = 100.0;
+    double reductionReleaseMs = 500.0;
+
+    if (mode_ == AdaptiveBandMode::LowTransient) {
+        reductionAttackMs = 5.0;
+        reductionReleaseMs = 140.0;
+    } else if (mode_ == AdaptiveBandMode::Harshness) {
+        reductionAttackMs = 8.0;
+        reductionReleaseMs = 160.0;
+    }
+
+    reductionAttack_ =
+        timeCoefficient(sampleRate_, reductionAttackMs);
+    reductionRelease_ =
+        timeCoefficient(sampleRate_, reductionReleaseMs);
+
+    weightSmoothing_ = timeCoefficient(sampleRate_, 180.0);
+
+    reset();
+}
+
+void AdaptiveBandController::reset() noexcept {
+    for (auto& channel : filters_) {
+        for (auto& filter : channel)
+            filter.reset();
+    }
+
+    fastEnergy_.fill(0.0);
+    slowEnergy_.fill(0.0);
+    weights_.fill(0.0);
+    weights_[0] = 1.0;
+
+    wideFastEnergy_ = 0.0;
+    wideSlowEnergy_ = 0.0;
+    reduction_ = 0.0;
+    selected_ = 0;
+    selectionCounter_ = 0;
+}
+
+void AdaptiveBandController::updateSelection() noexcept {
+    std::size_t best = 0;
+
+    for (std::size_t band = 1; band < kBandCount; ++band) {
+        if (slowEnergy_[band] > slowEnergy_[best])
+            best = band;
+    }
+
+    if (best != selected_ &&
+        slowEnergy_[best] > slowEnergy_[selected_] * 1.08) {
+        selected_ = best;
+    }
+}
+
+double AdaptiveBandController::selectedFrequency() const noexcept {
+    double sum = 0.0;
+    double weighted = 0.0;
+
+    for (std::size_t band = 0; band < kBandCount; ++band) {
+        sum += weights_[band];
+        weighted += weights_[band] * centers_[band];
+    }
+
+    return sum > kEpsilon
+        ? weighted / sum
+        : centers_[selected_];
+}
+
+void AdaptiveBandController::processFrame(
+    double& left,
+    double& right) noexcept {
+
+    if (!std::isfinite(left))
+        left = 0.0;
+    if (!std::isfinite(right))
+        right = 0.0;
+
+    double bandLeft[kBandCount] {};
+    double bandRight[kBandCount] {};
+
+    for (std::size_t band = 0; band < kBandCount; ++band) {
+        bandLeft[band] = filters_[0][band].process(left);
+        bandRight[band] = filters_[1][band].process(right);
+
+        const double magnitude = std::max(
+            std::abs(bandLeft[band]),
+            std::abs(bandRight[band]));
+
+        const double target = magnitude * magnitude;
+
+        const double fastCoefficient =
+            target > fastEnergy_[band]
+                ? fastAttack_
+                : fastRelease_;
+
+        fastEnergy_[band] =
+            fastCoefficient * fastEnergy_[band] +
+            (1.0 - fastCoefficient) * target;
+
+        const double slowCoefficient =
+            target > slowEnergy_[band]
+                ? slowAttack_
+                : slowRelease_;
+
+        slowEnergy_[band] =
+            slowCoefficient * slowEnergy_[band] +
+            (1.0 - slowCoefficient) * target;
+    }
+
+    const double wideMagnitude =
+        std::max(std::abs(left), std::abs(right));
+    const double wideTarget = wideMagnitude * wideMagnitude;
+
+    const double wideFastCoefficient =
+        wideTarget > wideFastEnergy_
+            ? wideFastAttack_
+            : wideFastRelease_;
+
+    wideFastEnergy_ =
+        wideFastCoefficient * wideFastEnergy_ +
+        (1.0 - wideFastCoefficient) * wideTarget;
+
+    const double wideSlowCoefficient =
+        wideTarget > wideSlowEnergy_
+            ? wideSlowAttack_
+            : wideSlowRelease_;
+
+    wideSlowEnergy_ =
+        wideSlowCoefficient * wideSlowEnergy_ +
+        (1.0 - wideSlowCoefficient) * wideTarget;
+
+    if (++selectionCounter_ >= 128) {
+        selectionCounter_ = 0;
+        updateSelection();
+    }
+
+    for (std::size_t band = 0; band < kBandCount; ++band) {
+        const double target =
+            band == selected_ ? 1.0 : 0.0;
+
+        weights_[band] =
+            weightSmoothing_ * weights_[band] +
+            (1.0 - weightSmoothing_) * target;
+    }
+
+    const double selectedSlow =
+        std::max(slowEnergy_[selected_], kEpsilon);
+
+    double slowSum = 0.0;
+    for (const double energy : slowEnergy_)
+        slowSum += energy;
+
+    const double otherAverage = std::max(
+        (slowSum - selectedSlow) /
+            static_cast<double>(kBandCount - 1),
+        kEpsilon);
+
+    const double peakiness =
+        selectedSlow / otherAverage;
+
+    double targetReduction = 0.0;
+
+    if (mode_ == AdaptiveBandMode::BodyResonance) {
+        const double activity = std::clamp(
+            (peakiness - 1.15) / 1.20,
+            0.0,
+            1.0);
+
+        targetReduction = 0.18 * activity;
+    } else if (mode_ == AdaptiveBandMode::LowTransient) {
+        const double rise = std::sqrt(
+            (fastEnergy_[selected_] + kEpsilon) /
+            (selectedSlow + kEpsilon));
+
+        const double dominance = std::sqrt(
+            selectedSlow /
+            (wideSlowEnergy_ + kEpsilon));
+
+        const double activity =
+            dominance > 0.08
+                ? std::clamp(
+                    (rise - 1.12) / 0.80,
+                    0.0,
+                    1.0)
+                : 0.0;
+
+        targetReduction = 0.30 * activity;
+    } else {
+        const double rise = std::sqrt(
+            (fastEnergy_[selected_] + kEpsilon) /
+            (selectedSlow + kEpsilon));
+
+        const double transient = std::clamp(
+            (rise - 1.10) / 0.65,
+            0.0,
+            1.0);
+
+        const double persistent = std::clamp(
+            (peakiness - 1.20) / 1.60,
+            0.0,
+            1.0);
+
+        targetReduction =
+            0.22 * std::max(transient, persistent);
+    }
+
+    const double reductionCoefficient =
+        targetReduction > reduction_
+            ? reductionAttack_
+            : reductionRelease_;
+
+    reduction_ =
+        reductionCoefficient * reduction_ +
+        (1.0 - reductionCoefficient) * targetReduction;
+
+    double componentLeft = 0.0;
+    double componentRight = 0.0;
+
+    for (std::size_t band = 0; band < kBandCount; ++band) {
+        componentLeft +=
+            weights_[band] * bandLeft[band];
+        componentRight +=
+            weights_[band] * bandRight[band];
+    }
+
+    left -= componentLeft * reduction_;
+    right -= componentRight * reduction_;
+}
+
+} // namespace HighGainGuitarFinisher::dsp

@@ -55,18 +55,22 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
 
     finisher_.prepare(sampleRate_);
     finisher_.setFinish(finish_);
+    finisher_.setLowCut80(lowCut80_ >= 0.5);
+
     return AudioEffect::setupProcessing(setup);
 }
 
 tresult PLUGIN_API Processor::setActive(TBool state) {
     if (state)
         finisher_.reset();
+
     return AudioEffect::setActive(state);
 }
 
 tresult PLUGIN_API Processor::setProcessing(TBool state) {
     if (state)
         finisher_.reset();
+
     return AudioEffect::setProcessing(state);
 }
 
@@ -81,8 +85,13 @@ void Processor::readParameterChanges(IParameterChanges* changes) {
 
         int32 sampleOffset = 0;
         ParamValue value = 0.0;
-        if (queue->getPoint(queue->getPointCount() - 1, sampleOffset, value) != kResultTrue)
+
+        if (queue->getPoint(
+                queue->getPointCount() - 1,
+                sampleOffset,
+                value) != kResultTrue) {
             continue;
+        }
 
         if (!std::isfinite(value))
             continue;
@@ -90,10 +99,11 @@ void Processor::readParameterChanges(IParameterChanges* changes) {
         value = std::clamp(value, 0.0, 1.0);
 
         switch (queue->getParameterId()) {
-            case kFinish: finish_ = value; break;
-            case kRoom:   room_ = value; break;
-            case kOutput: output_ = value; break;
-            case kBypass: bypass_ = value; break;
+            case kFinish:   finish_ = value; break;
+            case kRoom:     room_ = value; break;
+            case kOutput:   output_ = value; break;
+            case kBypass:   bypass_ = value; break;
+            case kLowCut80: lowCut80_ = value; break;
             default: break;
         }
     }
@@ -112,6 +122,7 @@ void Processor::processBlock(
         bypassed ? 1.0 : std::pow(10.0, outputDb / 20.0);
 
     finisher_.setFinish(finish_);
+    finisher_.setLowCut80(lowCut80_ >= 0.5);
 
     for (int32 sample = 0; sample < numSamples; ++sample) {
         const Sample* inputLeft = inputs[0];
@@ -126,9 +137,14 @@ void Processor::processBlock(
             continue;
 
         double left =
-            inputLeft ? static_cast<double>(inputLeft[sample]) : 0.0;
+            inputLeft
+                ? static_cast<double>(inputLeft[sample])
+                : 0.0;
+
         double right =
-            inputRight ? static_cast<double>(inputRight[sample]) : left;
+            inputRight
+                ? static_cast<double>(inputRight[sample])
+                : left;
 
         if (!std::isfinite(left))
             left = 0.0;
@@ -138,8 +154,6 @@ void Processor::processBlock(
         if (!bypassed)
             finisher_.processFrame(left, right);
 
-        // ROOM remains deliberately neutral until the dedicated industrial
-        // ambience is designed and listening-tested.
         outputLeft[sample] =
             static_cast<Sample>(left * outputGain);
 
@@ -153,12 +167,17 @@ void Processor::processBlock(
 tresult PLUGIN_API Processor::process(ProcessData& data) {
     readParameterChanges(data.inputParameterChanges);
 
-    if (data.numInputs == 0 || data.numOutputs == 0 || data.numSamples <= 0)
+    if (data.numInputs == 0 ||
+        data.numOutputs == 0 ||
+        data.numSamples <= 0) {
         return kResultOk;
+    }
 
     const int32 numChannels = std::min<int32>(
         2,
-        std::min(data.inputs[0].numChannels, data.outputs[0].numChannels));
+        std::min(
+            data.inputs[0].numChannels,
+            data.outputs[0].numChannels));
 
     if (numChannels <= 0)
         return kResultOk;
@@ -180,12 +199,22 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
     }
 
     bool silent = true;
+
     if (data.symbolicSampleSize == kSample32) {
-        for (int32 channel = 0; channel < numChannels && silent; ++channel) {
-            const auto* output = data.outputs[0].channelBuffers32[channel];
+        for (int32 channel = 0;
+             channel < numChannels && silent;
+             ++channel) {
+
+            const auto* output =
+                data.outputs[0].channelBuffers32[channel];
+
             if (!output)
                 continue;
-            for (int32 sample = 0; sample < data.numSamples; ++sample) {
+
+            for (int32 sample = 0;
+                 sample < data.numSamples;
+                 ++sample) {
+
                 if (output[sample] != 0.0f) {
                     silent = false;
                     break;
@@ -193,11 +222,20 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
             }
         }
     } else {
-        for (int32 channel = 0; channel < numChannels && silent; ++channel) {
-            const auto* output = data.outputs[0].channelBuffers64[channel];
+        for (int32 channel = 0;
+             channel < numChannels && silent;
+             ++channel) {
+
+            const auto* output =
+                data.outputs[0].channelBuffers64[channel];
+
             if (!output)
                 continue;
-            for (int32 sample = 0; sample < data.numSamples; ++sample) {
+
+            for (int32 sample = 0;
+                 sample < data.numSamples;
+                 ++sample) {
+
                 if (output[sample] != 0.0) {
                     silent = false;
                     break;
@@ -220,21 +258,40 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
     IBStreamer stream(state, kLittleEndian);
 
     int32 version = 0;
-    if (!stream.readInt32(version) || version != kStateVersion)
+    if (!stream.readInt32(version) ||
+        version < kFirstSupportedStateVersion ||
+        version > kStateVersion) {
         return kResultFalse;
+    }
 
-    double values[4] {};
-    for (double& value : values) {
+    double legacyValues[4] {};
+
+    for (double& value : legacyValues) {
         if (!stream.readDouble(value) || !std::isfinite(value))
             return kResultFalse;
+
         value = std::clamp(value, 0.0, 1.0);
     }
 
-    finish_ = values[0];
-    room_ = values[1];
-    output_ = values[2];
-    bypass_ = values[3];
+    finish_ = legacyValues[0];
+    room_ = legacyValues[1];
+    output_ = legacyValues[2];
+    bypass_ = legacyValues[3];
+
+    if (version >= 2) {
+        if (!stream.readDouble(lowCut80_) ||
+            !std::isfinite(lowCut80_)) {
+            return kResultFalse;
+        }
+
+        lowCut80_ =
+            std::clamp(lowCut80_, 0.0, 1.0);
+    } else {
+        lowCut80_ = 0.0;
+    }
+
     finisher_.setFinish(finish_);
+    finisher_.setLowCut80(lowCut80_ >= 0.5);
 
     return kResultOk;
 }
@@ -248,7 +305,14 @@ tresult PLUGIN_API Processor::getState(IBStream* state) {
     if (!stream.writeInt32(kStateVersion))
         return kResultFalse;
 
-    const double values[4] {finish_, room_, output_, bypass_};
+    const double values[5] {
+        finish_,
+        room_,
+        output_,
+        bypass_,
+        lowCut80_
+    };
+
     for (const double value : values) {
         if (!stream.writeDouble(value))
             return kResultFalse;

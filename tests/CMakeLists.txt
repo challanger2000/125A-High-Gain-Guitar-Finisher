@@ -1,8 +1,11 @@
+set(HGGF_DSP_SOURCES
+    ../src/dsp/AdaptiveBandController.cpp
+    ../src/dsp/MetalFinisherDSP.cpp
+)
+
 add_executable(HighGainGuitarFinisherDSPTests
     dsp_smoke.cpp
-    ../src/dsp/DynamicLowEndController.cpp
-    ../src/dsp/DynamicHarshnessController.cpp
-    ../src/dsp/MetalFinisherDSP.cpp
+    \${HGGF_DSP_SOURCES}
 )
 
 target_include_directories(HighGainGuitarFinisherDSPTests
@@ -10,29 +13,68 @@ target_include_directories(HighGainGuitarFinisherDSPTests
         ../src/dsp
 )
 
-target_compile_features(HighGainGuitarFinisherDSPTests PRIVATE cxx_std_17)
-hggf_enable_project_warnings(HighGainGuitarFinisherDSPTests)
+target_compile_features(
+    HighGainGuitarFinisherDSPTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherDSPTests
+)
 
 add_test(
     NAME HighGainGuitarFinisher.DSP.Smoke
     COMMAND HighGainGuitarFinisherDSPTests
 )
 
-add_executable(HighGainGuitarFinisherMeasurements
-    measurement_suite.cpp
-    ../src/dsp/DynamicLowEndController.cpp
-    ../src/dsp/DynamicHarshnessController.cpp
-    ../src/dsp/MetalFinisherDSP.cpp
+add_executable(HighGainGuitarFinisherAdaptiveTests
+    adaptive_fixture_tests.cpp
+    \${HGGF_DSP_SOURCES}
 )
 
-target_include_directories(HighGainGuitarFinisherMeasurements
+target_include_directories(
+    HighGainGuitarFinisherAdaptiveTests
+    PRIVATE
+        ../src/dsp
+)
+
+target_compile_features(
+    HighGainGuitarFinisherAdaptiveTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherAdaptiveTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.DSP.Adaptive
+    COMMAND HighGainGuitarFinisherAdaptiveTests
+)
+
+add_executable(HighGainGuitarFinisherMeasurements
+    measurement_suite.cpp
+    \${HGGF_DSP_SOURCES}
+)
+
+target_include_directories(
+    HighGainGuitarFinisherMeasurements
     PRIVATE
         .
         ../src/dsp
 )
 
-target_compile_features(HighGainGuitarFinisherMeasurements PRIVATE cxx_std_17)
-hggf_enable_project_warnings(HighGainGuitarFinisherMeasurements)
+target_compile_features(
+    HighGainGuitarFinisherMeasurements
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherMeasurements
+)
 
 add_test(
     NAME HighGainGuitarFinisher.Measurements
@@ -41,18 +83,24 @@ add_test(
 
 add_executable(HighGainGuitarFinisherLatencyImpulse
     latency_impulse.cpp
-    ../src/dsp/DynamicLowEndController.cpp
-    ../src/dsp/DynamicHarshnessController.cpp
-    ../src/dsp/MetalFinisherDSP.cpp
+    \${HGGF_DSP_SOURCES}
 )
 
-target_include_directories(HighGainGuitarFinisherLatencyImpulse
+target_include_directories(
+    HighGainGuitarFinisherLatencyImpulse
     PRIVATE
         ../src/dsp
 )
 
-target_compile_features(HighGainGuitarFinisherLatencyImpulse PRIVATE cxx_std_17)
-hggf_enable_project_warnings(HighGainGuitarFinisherLatencyImpulse)
+target_compile_features(
+    HighGainGuitarFinisherLatencyImpulse
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherLatencyImpulse
+)
 
 add_test(
     NAME HighGainGuitarFinisher.LatencyImpulse

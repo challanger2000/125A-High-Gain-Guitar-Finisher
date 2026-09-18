@@ -10,20 +10,45 @@ void MetalFinisherDSP::prepare(double sampleRate) noexcept {
         ? sampleRate
         : 44100.0;
 
-    updateFilters();
-    dynamicLowEnd_.prepare(sampleRate_);
-    dynamicHarshness_.prepare(sampleRate_);
+    const auto lowCut =
+        makeHighPass(sampleRate_, 80.0, 0.7071067811865476);
+
+    for (auto& filter : lowCut_)
+        filter.setCoefficients(lowCut);
+
+    lowCutSmoothing_ =
+        std::exp(-1.0 / (sampleRate_ * 0.005));
+
+    lowEnd_.prepare(
+        sampleRate_,
+        AdaptiveBandMode::LowTransient,
+        {85.0, 110.0, 145.0, 180.0},
+        2.5);
+
+    body_.prepare(
+        sampleRate_,
+        AdaptiveBandMode::BodyResonance,
+        {220.0, 300.0, 390.0, 500.0},
+        0.9);
+
+    harshness_.prepare(
+        sampleRate_,
+        AdaptiveBandMode::Harshness,
+        {3200.0, 4200.0, 5400.0, 6800.0},
+        1.0);
+
     reset();
 }
 
 void MetalFinisherDSP::reset() noexcept {
-    for (auto& channel : channels_) {
-        channel.highPass.reset();
-        channel.lowMid.reset();
-    }
+    for (auto& filter : lowCut_)
+        filter.reset();
 
-    dynamicLowEnd_.reset();
-    dynamicHarshness_.reset();
+    lowEnd_.reset();
+    body_.reset();
+    harshness_.reset();
+
+    lowCutMix_ = lowCutTarget_;
 }
 
 void MetalFinisherDSP::setFinish(double normalized) noexcept {
@@ -33,44 +58,58 @@ void MetalFinisherDSP::setFinish(double normalized) noexcept {
         1.0);
 }
 
-void MetalFinisherDSP::updateFilters() noexcept {
-    const auto highPass =
-        makeHighPass(sampleRate_, 85.0, 0.7071067811865476);
-    const auto lowMid =
-        makePeaking(sampleRate_, 300.0, 0.85, -4.0);
-
-    for (auto& channel : channels_) {
-        channel.highPass.setCoefficients(highPass);
-        channel.lowMid.setCoefficients(lowMid);
-    }
+void MetalFinisherDSP::setLowCut80(bool enabled) noexcept {
+    lowCutTarget_ = enabled ? 1.0 : 0.0;
 }
 
-void MetalFinisherDSP::processFrame(double& left,
-                                    double& right) noexcept {
+void MetalFinisherDSP::processFrame(
+    double& left,
+    double& right) noexcept {
+
     if (!std::isfinite(left))
         left = 0.0;
     if (!std::isfinite(right))
         right = 0.0;
 
-    if (finish_ <= 0.0)
+    const double filteredLeft =
+        lowCut_[0].process(left);
+    const double filteredRight =
+        lowCut_[1].process(right);
+
+    lowCutMix_ =
+        lowCutSmoothing_ * lowCutMix_ +
+        (1.0 - lowCutSmoothing_) * lowCutTarget_;
+
+    if (std::abs(lowCutMix_ - lowCutTarget_) < 1.0e-9)
+        lowCutMix_ = lowCutTarget_;
+
+    const double baseLeft =
+        lowCutMix_ > 0.0
+            ? left + (filteredLeft - left) * lowCutMix_
+            : left;
+
+    const double baseRight =
+        lowCutMix_ > 0.0
+            ? right + (filteredRight - right) * lowCutMix_
+            : right;
+
+    double wetLeft = baseLeft;
+    double wetRight = baseRight;
+
+    lowEnd_.processFrame(wetLeft, wetRight);
+    body_.processFrame(wetLeft, wetRight);
+    harshness_.processFrame(wetLeft, wetRight);
+
+    if (finish_ <= 0.0) {
+        left = baseLeft;
+        right = baseRight;
         return;
+    }
 
-    const double dryLeft = left;
-    const double dryRight = right;
-
-    double wetLeft =
-        channels_[0].lowMid.process(
-            channels_[0].highPass.process(left));
-
-    double wetRight =
-        channels_[1].lowMid.process(
-            channels_[1].highPass.process(right));
-
-    dynamicLowEnd_.processFrame(wetLeft, wetRight);
-    dynamicHarshness_.processFrame(wetLeft, wetRight);
-
-    left = dryLeft + (wetLeft - dryLeft) * finish_;
-    right = dryRight + (wetRight - dryRight) * finish_;
+    left =
+        baseLeft + (wetLeft - baseLeft) * finish_;
+    right =
+        baseRight + (wetRight - baseRight) * finish_;
 }
 
 } // namespace HighGainGuitarFinisher::dsp

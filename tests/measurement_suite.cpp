@@ -16,32 +16,47 @@ constexpr int seconds = 4;
 constexpr std::size_t sampleCount =
     static_cast<std::size_t>(sampleRate * seconds);
 
-void makeReference(std::vector<double>& left,
-                   std::vector<double>& right) {
+void makeReference(
+    std::vector<double>& left,
+    std::vector<double>& right) {
+
     left.resize(sampleCount);
     right.resize(sampleCount);
 
     for (std::size_t i = 0; i < sampleCount; ++i) {
-        const double t = static_cast<double>(i) / sampleRate;
+        const double time =
+            static_cast<double>(i) / sampleRate;
 
-        // Deterministic high-gain-like stress signal:
-        // low thump + body + mid definition + harshness + upper presence.
         const double low =
-            0.18 * std::sin(2.0 * HGGFTests::kPi * 95.0 * t);
+            0.18 * std::sin(
+                2.0 * HGGFTests::kPi * 95.0 * time);
+
         const double lowMid =
-            0.16 * std::sin(2.0 * HGGFTests::kPi * 315.0 * t);
+            0.16 * std::sin(
+                2.0 * HGGFTests::kPi * 315.0 * time);
+
         const double mid =
-            0.22 * std::sin(2.0 * HGGFTests::kPi * 1050.0 * t);
+            0.22 * std::sin(
+                2.0 * HGGFTests::kPi * 1050.0 * time);
+
         const double harsh =
-            0.14 * std::sin(2.0 * HGGFTests::kPi * 4800.0 * t);
+            0.14 * std::sin(
+                2.0 * HGGFTests::kPi * 4800.0 * time);
+
         const double presence =
-            0.08 * std::sin(2.0 * HGGFTests::kPi * 7200.0 * t);
+            0.08 * std::sin(
+                2.0 * HGGFTests::kPi * 7200.0 * time);
 
         const double pulse =
-            (std::fmod(t, 0.25) < 0.070) ? 1.0 : 0.30;
+            std::fmod(time, 0.25) < 0.070
+                ? 1.0
+                : 0.30;
 
         left[i] =
-            pulse * (low + lowMid) + mid + harsh + presence;
+            pulse * (low + lowMid) +
+            mid +
+            harsh +
+            presence;
 
         right[i] =
             pulse * (
@@ -53,23 +68,32 @@ void makeReference(std::vector<double>& left,
     }
 }
 
-void process(std::vector<double>& left,
-             std::vector<double>& right,
-             double finish) {
+void process(
+    std::vector<double>& left,
+    std::vector<double>& right,
+    double finish) {
+
     MetalFinisherDSP dsp;
     dsp.prepare(sampleRate);
     dsp.setFinish(finish);
+    dsp.setLowCut80(false);
 
     for (std::size_t i = 0; i < left.size(); ++i)
         dsp.processFrame(left[i], right[i]);
 }
 
-std::vector<double> monoFromStereo(const std::vector<double>& left,
-                                   const std::vector<double>& right) {
-    const std::size_t count = std::min(left.size(), right.size());
+std::vector<double> monoFromStereo(
+    const std::vector<double>& left,
+    const std::vector<double>& right) {
+
+    const std::size_t count =
+        std::min(left.size(), right.size());
+
     std::vector<double> mono(count);
+
     for (std::size_t i = 0; i < count; ++i)
         mono[i] = 0.5 * (left[i] + right[i]);
+
     return mono;
 }
 
@@ -84,17 +108,27 @@ int main() {
     auto bypassRight = inputRight;
     process(bypassLeft, bypassRight, 0.0);
 
-    assert(HGGFTests::nullPeak(inputLeft, bypassLeft) == 0.0);
-    assert(HGGFTests::nullPeak(inputRight, bypassRight) == 0.0);
+    assert(
+        HGGFTests::nullPeak(inputLeft, bypassLeft) ==
+        0.0);
+
+    assert(
+        HGGFTests::nullPeak(inputRight, bypassRight) ==
+        0.0);
 
     auto outputLeft = inputLeft;
     auto outputRight = inputRight;
     process(outputLeft, outputRight, 1.0);
 
     const auto inputMetrics =
-        HGGFTests::measureStereo(inputLeft, inputRight);
+        HGGFTests::measureStereo(
+            inputLeft,
+            inputRight);
+
     const auto outputMetrics =
-        HGGFTests::measureStereo(outputLeft, outputRight);
+        HGGFTests::measureStereo(
+            outputLeft,
+            outputRight);
 
     const auto inputBands =
         HGGFTests::measureTonalBands(
@@ -144,22 +178,20 @@ int main() {
     assert(std::isfinite(outputMetrics.correlation));
     assert(std::isfinite(outputMetrics.crestDb));
 
-    // Guardrails, not tonal targets: catch accidental broadband destruction.
-    assert(rmsDelta > -8.0);
-    assert(rmsDelta < 2.0);
-    assert(midsDelta > -2.0);
-    assert(presenceDelta > -3.0);
+    assert(rmsDelta > -2.0);
+    assert(rmsDelta < 1.0);
+    assert(subDelta > -2.0);
+    assert(bodyDelta > -1.0);
+    assert(midsDelta > -1.0);
+    assert(presenceDelta > -1.5);
 
-    // Current FINISH intent: clean low/low-mid and tame harshness more than mids.
-    assert(subDelta < -1.0);
-    assert(lowDelta < -1.0);
-    assert(bodyDelta < -1.0);
+    assert(lowDelta < -0.4);
     assert(upperMidsDelta < -0.2);
 
-    // Stereo-linked processing must not radically change stereo behaviour.
-    assert(std::abs(
-        outputMetrics.correlation -
-        inputMetrics.correlation) < 0.05);
+    assert(
+        std::abs(
+            outputMetrics.correlation -
+            inputMetrics.correlation) < 0.05);
 
     std::cout
         << "Measurement suite passed\n"

@@ -61,6 +61,8 @@ private:
     double output_ {0.5};
     double bypass_ {0.0};
     double lowCut80_ {0.0};
+
+    bool lastBypassed_ {false};
 };
 
 } // namespace HighGainGuitarFinisher

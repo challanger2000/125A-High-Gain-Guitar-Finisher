@@ -56,6 +56,7 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
     finisher_.prepare(sampleRate_);
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
+    lastBypassed_ = bypass_ >= 0.5;
 
     return AudioEffect::setupProcessing(setup);
 }
@@ -117,9 +118,18 @@ void Processor::processBlock(
     int32 numChannels) {
 
     const bool bypassed = bypass_ >= 0.5;
+
+    if (bypassed != lastBypassed_) {
+        finisher_.reset();
+        lastBypassed_ = bypassed;
+    }
+
     const double outputDb = (output_ * 24.0) - 12.0;
+
     const double outputGain =
-        bypassed ? 1.0 : std::pow(10.0, outputDb / 20.0);
+        bypassed
+            ? 1.0
+            : std::pow(10.0, outputDb / 20.0);
 
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
@@ -292,6 +302,8 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
 
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
+    finisher_.reset();
+    lastBypassed_ = bypass_ >= 0.5;
 
     return kResultOk;
 }

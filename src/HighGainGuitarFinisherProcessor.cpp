@@ -68,7 +68,14 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
         ? setup.sampleRate
         : 44100.0;
 
-    finisher_.prepare(sampleRate_);
+    // ROOM allocates delay storage during prepare(). Keep allocation out of
+    // process(), but never let an allocation failure escape across the VST3 ABI.
+    try {
+        finisher_.prepare(sampleRate_);
+    } catch (...) {
+        return kResultFalse;
+    }
+
     finisher_.setFinish(finish_);
     finisher_.setLowCut(lowCut_);
     finisher_.setRoomWet(room_);

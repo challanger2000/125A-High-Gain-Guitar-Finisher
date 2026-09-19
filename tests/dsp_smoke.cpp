@@ -74,6 +74,64 @@ void verifyExactTransparency() {
     }
 }
 
+void verifyFinishReenableStartsClean() {
+    MetalFinisherDSP reused;
+    reused.prepare(sampleRate);
+    reused.setFinish(1.0);
+
+    // Build substantial adaptive/filter history first.
+    for (int i = 0; i < 24000; ++i) {
+        const double t =
+            static_cast<double>(i) / sampleRate;
+
+        double left =
+            0.7 * std::sin(2.0 * pi * 175.0 * t) +
+            0.4 * std::sin(2.0 * pi * 6600.0 * t);
+
+        double right =
+            0.6 * std::sin(2.0 * pi * 145.0 * t) +
+            0.35 * std::sin(2.0 * pi * 5400.0 * t);
+
+        reused.processFrame(left, right);
+    }
+
+    reused.setFinish(0.0);
+    reused.setFinish(1.0);
+
+    MetalFinisherDSP fresh;
+    fresh.prepare(sampleRate);
+    fresh.setFinish(1.0);
+
+    for (int i = 0; i < 4096; ++i) {
+        const double t =
+            static_cast<double>(i) / sampleRate;
+
+        const double inputLeft =
+            0.4 * std::sin(2.0 * pi * 110.0 * t) +
+            0.2 * std::sin(2.0 * pi * 3200.0 * t);
+
+        const double inputRight =
+            0.38 * std::sin(2.0 * pi * 180.0 * t) +
+            0.22 * std::sin(2.0 * pi * 6800.0 * t);
+
+        double reusedLeft = inputLeft;
+        double reusedRight = inputRight;
+        double freshLeft = inputLeft;
+        double freshRight = inputRight;
+
+        reused.processFrame(
+            reusedLeft,
+            reusedRight);
+
+        fresh.processFrame(
+            freshLeft,
+            freshRight);
+
+        HGGF_REQUIRE(reusedLeft == freshLeft);
+        HGGF_REQUIRE(reusedRight == freshRight);
+    }
+}
+
 void verifyFiniteAcrossSampleRates() {
     for (const double rate :
          {44100.0, 48000.0, 96000.0, 192000.0}) {
@@ -109,6 +167,7 @@ void verifyFiniteAcrossSampleRates() {
 
 int main() {
     verifyExactTransparency();
+    verifyFinishReenableStartsClean();
     verifyFiniteAcrossSampleRates();
 
     const double cutoff45 =

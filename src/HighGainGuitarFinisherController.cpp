@@ -104,14 +104,14 @@ public:
     }
 
     void toString(
-        ParamValue valueNormalized,
+        ParamValue normalizedValue,
         String128 string) const
         SMTG_OVERRIDE {
 
         UString128 result;
 
         if (!dsp::lowCutEnabled(
-                valueNormalized)) {
+                normalizedValue)) {
 
             result.fromAscii(
                 "Off");
@@ -119,7 +119,7 @@ public:
             result.printFloat(
                 dsp::
                     lowCutFrequencyFromNormalized(
-                        valueNormalized),
+                        normalizedValue),
                 0);
         }
 
@@ -130,8 +130,11 @@ public:
 
     bool fromString(
         const TChar* string,
-        ParamValue& valueNormalized) const
+        ParamValue& normalizedResult) const
         SMTG_OVERRIDE {
+
+        if (!string)
+            return false;
 
         UString value(
             const_cast<TChar*>(
@@ -146,7 +149,7 @@ public:
             return false;
         }
 
-        valueNormalized =
+        normalizedResult =
             dsp::
                 lowCutNormalizedFromFrequency(
                     frequency);
@@ -155,14 +158,14 @@ public:
     }
 
     ParamValue toPlain(
-        ParamValue valueNormalized) const
+        ParamValue normalizedValue) const
         SMTG_OVERRIDE {
 
         return dsp::lowCutEnabled(
-                   valueNormalized)
+                   normalizedValue)
             ? dsp::
                 lowCutFrequencyFromNormalized(
-                    valueNormalized)
+                    normalizedValue)
             : 0.0;
     }
 

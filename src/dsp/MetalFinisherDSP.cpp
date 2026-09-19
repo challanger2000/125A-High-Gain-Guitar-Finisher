@@ -5,7 +5,7 @@
 
 namespace HighGainGuitarFinisher::dsp {
 
-void MetalFinisherDSP::prepare(double sampleRate) noexcept {
+void MetalFinisherDSP::prepare(double sampleRate) {
     sampleRate_ = (std::isfinite(sampleRate) && sampleRate > 1000.0)
         ? sampleRate
         : 44100.0;
@@ -67,10 +67,30 @@ void MetalFinisherDSP::reset() noexcept {
 }
 
 void MetalFinisherDSP::setFinish(double normalized) noexcept {
-    finish_ = std::clamp(
-        std::isfinite(normalized) ? normalized : 0.0,
-        0.0,
-        1.0);
+    const double next =
+        std::clamp(
+            std::isfinite(normalized)
+                ? normalized
+                : 0.0,
+            0.0,
+            1.0);
+
+    const bool wasActive =
+        finish_ > 0.0;
+
+    finish_ = next;
+
+    // Do not freeze adaptive IIR/detector state while FINISH is off.
+    // Reset once at the transition to exact zero so a later re-enable
+    // cannot revive stale filter history from an earlier guitar phrase.
+    if (wasActive &&
+        finish_ <= 0.0) {
+
+        lowEnd_.reset();
+        body_.reset();
+        harshness_.reset();
+        autoLevel_.reset();
+    }
 }
 
 void MetalFinisherDSP::setLowCut(double normalized) noexcept {

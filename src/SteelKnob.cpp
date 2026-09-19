@@ -67,7 +67,7 @@ void SteelKnob::draw(
     context->setDrawMode(
         VSTGUI::kAntiAliasing);
 
-    const double value =
+    const double normalizedValue =
         std::clamp(
             static_cast<double>(
                 getValueNormalized()),
@@ -202,7 +202,7 @@ void SteelKnob::draw(
         135.f,
         static_cast<float>(
             135.0 +
-            value * 270.0));
+            normalizedValue * 270.0));
 
     const int tickCount =
         hero ? 13 : 9;
@@ -258,7 +258,7 @@ void SteelKnob::draw(
 
     const double angle =
         (135.0 +
-         value * 270.0) *
+         normalizedValue * 270.0) *
         kPi /
         180.0;
 

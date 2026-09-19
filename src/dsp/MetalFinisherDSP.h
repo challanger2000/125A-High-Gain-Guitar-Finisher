@@ -12,7 +12,7 @@ namespace HighGainGuitarFinisher::dsp {
 
 class MetalFinisherDSP {
 public:
-    void prepare(double sampleRate) noexcept;
+    void prepare(double sampleRate);
     void reset() noexcept;
 
     void setFinish(double normalized) noexcept;

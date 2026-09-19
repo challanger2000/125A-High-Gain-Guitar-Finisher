@@ -25,7 +25,7 @@ set(HIGH_GAIN_GUITAR_FINISHER_SOURCES
 
 smtg_add_vst3plugin(
     HighGainGuitarFinisher
-    PACKAGE_NAME "125A High Gain Guitar Finisher"
+    PACKAGE_NAME "125A-High-Gain-Guitar-Finisher"
     SOURCES_LIST ${HIGH_GAIN_GUITAR_FINISHER_SOURCES}
 )
 

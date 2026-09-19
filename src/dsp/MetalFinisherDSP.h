@@ -4,6 +4,7 @@
 #include "AutoLevelCompensator.h"
 #include "Biquad.h"
 #include "IndustrialRoom.h"
+#include "LowCutMapping.h"
 
 #include <array>
 
@@ -15,7 +16,7 @@ public:
     void reset() noexcept;
 
     void setFinish(double normalized) noexcept;
-    void setLowCut80(bool enabled) noexcept;
+    void setLowCut(double normalized) noexcept;
     void setRoomWet(double normalized) noexcept;
     void setRoomDecay(double normalized) noexcept;
 
@@ -62,8 +63,13 @@ private:
     double finish_ {0.0};
 
     double lowCutTarget_ {0.0};
+    double lowCutFrequencyHz_ {kLowCutMinimumHz};
     double lowCutMix_ {0.0};
-    double lowCutSmoothing_ {0.0};
+    double lowCutMixSmoothing_ {0.0};
+    double lowCutFrequencySmoothing_ {0.0};
+    int lowCutCoefficientCountdown_ {0};
+
+    void updateLowCutCoefficients() noexcept;
 };
 
 } // namespace HighGainGuitarFinisher::dsp

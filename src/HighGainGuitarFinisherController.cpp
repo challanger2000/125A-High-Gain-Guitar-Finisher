@@ -1,7 +1,9 @@
 #include "HighGainGuitarFinisherController.h"
 #include "HighGainGuitarFinisherIDs.h"
+#include "dsp/LowCutMapping.h"
 
 #include "base/source/fstreamer.h"
+#include "pluginterfaces/base/ustring.h"
 #include "public.sdk/source/vst/vstparameters.h"
 
 #include <algorithm>
@@ -11,6 +13,79 @@ namespace HighGainGuitarFinisher {
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
+
+namespace {
+
+class LowCutParameter final : public Parameter {
+public:
+    LowCutParameter()
+    : Parameter(
+        STR16("Low Cut"),
+        kLowCut80,
+        STR16("Hz"),
+        0.0,
+        kStepCountContinuous,
+        ParameterInfo::kCanAutomate) {
+    }
+
+    void toString(
+        ParamValue valueNormalized,
+        String128 string) const SMTG_OVERRIDE {
+
+        UString128 result;
+
+        if (!dsp::lowCutEnabled(valueNormalized)) {
+            result.fromAscii("Off");
+        } else {
+            result.printFloat(
+                dsp::lowCutFrequencyFromNormalized(
+                    valueNormalized),
+                0);
+        }
+
+        result.copyTo(string, 128);
+    }
+
+    bool fromString(
+        const TChar* string,
+        ParamValue& valueNormalized) const SMTG_OVERRIDE {
+
+        UString value(
+            const_cast<TChar*>(string),
+            strlen16(string));
+
+        ParamValue frequency = 0.0;
+
+        if (!value.scanFloat(frequency))
+            return false;
+
+        valueNormalized =
+            dsp::lowCutNormalizedFromFrequency(
+                frequency);
+
+        return true;
+    }
+
+    ParamValue toPlain(
+        ParamValue valueNormalized) const SMTG_OVERRIDE {
+
+        return dsp::lowCutEnabled(valueNormalized)
+            ? dsp::lowCutFrequencyFromNormalized(
+                valueNormalized)
+            : 0.0;
+    }
+
+    ParamValue toNormalized(
+        ParamValue plainValue) const SMTG_OVERRIDE {
+
+        return dsp::lowCutNormalizedFromFrequency(
+            plainValue);
+    }
+
+    OBJ_METHODS(LowCutParameter, Parameter)
+};
+
+} // namespace
 
 tresult PLUGIN_API Controller::initialize(FUnknown* context) {
     const auto result = EditController::initialize(context);
@@ -48,12 +123,7 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context) {
         kBypass);
 
     parameters.addParameter(
-        STR16("Low Cut 80 Hz"),
-        STR16(""),
-        1,
-        0.0,
-        ParameterInfo::kCanAutomate,
-        kLowCut80);
+        new LowCutParameter());
 
     return kResultOk;
 }
@@ -107,9 +177,16 @@ tresult PLUGIN_API Controller::setComponentState(IBStream* state) {
             return kResultFalse;
         }
 
+        const double normalizedLowCut =
+            version >= 4
+                ? std::clamp(lowCut, 0.0, 1.0)
+                : (lowCut >= 0.5
+                    ? dsp::lowCutNormalizedFromFrequency(80.0)
+                    : 0.0);
+
         setParamNormalized(
             kLowCut80,
-            std::clamp(lowCut, 0.0, 1.0));
+            normalizedLowCut);
     } else {
         setParamNormalized(
             kLowCut80,

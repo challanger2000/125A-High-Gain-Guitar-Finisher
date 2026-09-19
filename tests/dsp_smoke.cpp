@@ -1,31 +1,42 @@
 #include "support/TestSupport.h"
 #include "MetalFinisherDSP.h"
+#include "LowCutMapping.h"
 
 #include <cmath>
 #include <iostream>
 
 using HighGainGuitarFinisher::dsp::MetalFinisherDSP;
+using HighGainGuitarFinisher::dsp::lowCutNormalizedFromFrequency;
 
 namespace {
 
 constexpr double pi = 3.141592653589793238462643383279502884;
 constexpr double sampleRate = 48000.0;
 
-double measureLowCutGain(double frequency) {
+double measureLowCutGain(
+    double cutoffFrequency,
+    double probeFrequency) {
+
     constexpr int warmup = 24000;
     constexpr int measured = 48000;
 
     MetalFinisherDSP dsp;
     dsp.prepare(sampleRate);
     dsp.setFinish(0.0);
-    dsp.setLowCut80(true);
+    dsp.setLowCut(
+        lowCutNormalizedFromFrequency(
+            cutoffFrequency));
 
     double inputPower = 0.0;
     double outputPower = 0.0;
 
     for (int i = 0; i < warmup + measured; ++i) {
         const double x =
-            std::sin(2.0 * pi * frequency * i / sampleRate);
+            std::sin(
+                2.0 * pi *
+                probeFrequency *
+                i /
+                sampleRate);
 
         double left = x;
         double right = x;
@@ -47,7 +58,7 @@ void verifyExactTransparency() {
     MetalFinisherDSP dsp;
     dsp.prepare(sampleRate);
     dsp.setFinish(0.0);
-    dsp.setLowCut80(false);
+    dsp.setLowCut(0.0);
 
     for (int i = 0; i < 4000; ++i) {
         const double x =
@@ -100,21 +111,38 @@ int main() {
     verifyExactTransparency();
     verifyFiniteAcrossSampleRates();
 
-    const double lowCut40 =
-        measureLowCutGain(40.0);
-    const double lowCut1000 =
-        measureLowCutGain(1000.0);
+    const double cutoff45 =
+        measureLowCutGain(45.0, 45.0);
 
-    HGGF_REQUIRE(lowCut40 < 0.35);
-    HGGF_REQUIRE(lowCut1000 > 0.99);
-    HGGF_REQUIRE(lowCut1000 < 1.01);
+    const double cutoff80 =
+        measureLowCutGain(80.0, 80.0);
+
+    const double cutoff120 =
+        measureLowCutGain(120.0, 120.0);
+
+    const double lowCut80At40 =
+        measureLowCutGain(80.0, 40.0);
+
+    const double lowCut80At1000 =
+        measureLowCutGain(80.0, 1000.0);
+
+    HGGF_REQUIRE(cutoff45 > 0.68 && cutoff45 < 0.73);
+    HGGF_REQUIRE(cutoff80 > 0.68 && cutoff80 < 0.73);
+    HGGF_REQUIRE(cutoff120 > 0.68 && cutoff120 < 0.73);
+
+    HGGF_REQUIRE(lowCut80At40 < 0.35);
+    HGGF_REQUIRE(lowCut80At1000 > 0.99);
+    HGGF_REQUIRE(lowCut80At1000 < 1.01);
 
     std::cout
         << "DSP smoke test passed\n"
-        << "Optional 80 Hz low-cut gain at 40 Hz: "
-        << lowCut40 << "\n"
-        << "Optional 80 Hz low-cut gain at 1 kHz: "
-        << lowCut1000 << "\n";
+        << "Low Cut gain at cutoff 45/80/120 Hz: "
+        << cutoff45 << " / "
+        << cutoff80 << " / "
+        << cutoff120 << "\n"
+        << "80 Hz compatibility response at 40 Hz / 1 kHz: "
+        << lowCut80At40 << " / "
+        << lowCut80At1000 << "\n";
 
     return 0;
 }

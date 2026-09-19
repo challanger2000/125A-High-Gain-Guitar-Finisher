@@ -5,6 +5,7 @@ set(HIGH_GAIN_GUITAR_FINISHER_SOURCES
     HighGainGuitarFinisherController.h
     HighGainGuitarFinisherController.cpp
     dsp/Biquad.h
+    dsp/LowCutMapping.h
     dsp/AdaptiveBandController.h
     dsp/AdaptiveBandController.cpp
     dsp/AutoLevelCompensator.h

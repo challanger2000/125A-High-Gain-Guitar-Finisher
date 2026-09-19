@@ -10,14 +10,11 @@ void MetalFinisherDSP::prepare(double sampleRate) noexcept {
         ? sampleRate
         : 44100.0;
 
-    const auto lowCut =
-        makeHighPass(sampleRate_, 80.0, 0.7071067811865476);
-
-    for (auto& filter : lowCut_)
-        filter.setCoefficients(lowCut);
-
-    lowCutSmoothing_ =
+    lowCutMixSmoothing_ =
         std::exp(-1.0 / (sampleRate_ * 0.005));
+
+    lowCutFrequencySmoothing_ =
+        std::exp(-1.0 / (sampleRate_ * 0.020));
 
     lowEnd_.prepare(
         sampleRate_,
@@ -53,7 +50,20 @@ void MetalFinisherDSP::reset() noexcept {
     autoLevel_.reset();
     room_.reset();
 
-    lowCutMix_ = lowCutTarget_;
+    const bool lowCutOn =
+        lowCutEnabled(lowCutTarget_);
+
+    lowCutMix_ =
+        lowCutOn ? 1.0 : 0.0;
+
+    lowCutFrequencyHz_ =
+        lowCutOn
+            ? lowCutFrequencyFromNormalized(
+                lowCutTarget_)
+            : kLowCutMinimumHz;
+
+    updateLowCutCoefficients();
+    lowCutCoefficientCountdown_ = 0;
 }
 
 void MetalFinisherDSP::setFinish(double normalized) noexcept {
@@ -63,8 +73,25 @@ void MetalFinisherDSP::setFinish(double normalized) noexcept {
         1.0);
 }
 
-void MetalFinisherDSP::setLowCut80(bool enabled) noexcept {
-    lowCutTarget_ = enabled ? 1.0 : 0.0;
+void MetalFinisherDSP::setLowCut(double normalized) noexcept {
+    lowCutTarget_ =
+        std::clamp(
+            std::isfinite(normalized)
+                ? normalized
+                : 0.0,
+            0.0,
+            1.0);
+}
+
+void MetalFinisherDSP::updateLowCutCoefficients() noexcept {
+    const auto coefficients =
+        makeHighPass(
+            sampleRate_,
+            lowCutFrequencyHz_,
+            0.7071067811865476);
+
+    for (auto& filter : lowCut_)
+        filter.setCoefficients(coefficients);
 }
 
 void MetalFinisherDSP::setRoomWet(double normalized) noexcept {
@@ -84,18 +111,44 @@ void MetalFinisherDSP::processFrame(
     if (!std::isfinite(right))
         right = 0.0;
 
+    const bool lowCutOn =
+        lowCutEnabled(lowCutTarget_);
+
+    const double targetMix =
+        lowCutOn ? 1.0 : 0.0;
+
+    lowCutMix_ =
+        lowCutMixSmoothing_ * lowCutMix_ +
+        (1.0 - lowCutMixSmoothing_) *
+            targetMix;
+
+    if (std::abs(lowCutMix_ - targetMix) < 1.0e-9)
+        lowCutMix_ = targetMix;
+
+    if (lowCutOn) {
+        const double targetFrequency =
+            lowCutFrequencyFromNormalized(
+                lowCutTarget_);
+
+        lowCutFrequencyHz_ =
+            lowCutFrequencySmoothing_ *
+                lowCutFrequencyHz_ +
+            (1.0 - lowCutFrequencySmoothing_) *
+                targetFrequency;
+
+        if (--lowCutCoefficientCountdown_ <= 0) {
+            updateLowCutCoefficients();
+            lowCutCoefficientCountdown_ = 16;
+        }
+    } else {
+        lowCutCoefficientCountdown_ = 0;
+    }
+
     const double filteredLeft =
         lowCut_[0].process(left);
 
     const double filteredRight =
         lowCut_[1].process(right);
-
-    lowCutMix_ =
-        lowCutSmoothing_ * lowCutMix_ +
-        (1.0 - lowCutSmoothing_) * lowCutTarget_;
-
-    if (std::abs(lowCutMix_ - lowCutTarget_) < 1.0e-9)
-        lowCutMix_ = lowCutTarget_;
 
     const double baseLeft =
         lowCutMix_ > 0.0

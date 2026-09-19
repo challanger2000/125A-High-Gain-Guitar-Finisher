@@ -20,7 +20,7 @@ enum ParamID : Steinberg::Vst::ParamID {
     kRoomDecay
 };
 
-constexpr Steinberg::int32 kStateVersion = 3;
+constexpr Steinberg::int32 kStateVersion = 4;
 constexpr Steinberg::int32 kFirstSupportedStateVersion = 1;
 
 } // namespace HighGainGuitarFinisher

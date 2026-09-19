@@ -1,5 +1,6 @@
 #include "HighGainGuitarFinisherProcessor.h"
 #include "HighGainGuitarFinisherIDs.h"
+#include "dsp/LowCutMapping.h"
 
 #include "base/source/fstreamer.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
@@ -69,7 +70,7 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
 
     finisher_.prepare(sampleRate_);
     finisher_.setFinish(finish_);
-    finisher_.setLowCut80(lowCut80_ >= 0.5);
+    finisher_.setLowCut(lowCut_);
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
     lastBypassed_ = bypass_ >= 0.5;
@@ -121,7 +122,7 @@ void Processor::readParameterChanges(IParameterChanges* changes) {
             case kRoomDecay: roomDecay_ = value; break;
             case kOutput:   output_ = value; break;
             case kBypass:   bypass_ = value; break;
-            case kLowCut80: lowCut80_ = value; break;
+            case kLowCut80: lowCut_ = value; break;
             default: break;
         }
     }
@@ -149,7 +150,7 @@ void Processor::processBlock(
             : std::pow(10.0, outputDb / 20.0);
 
     finisher_.setFinish(finish_);
-    finisher_.setLowCut80(lowCut80_ >= 0.5);
+    finisher_.setLowCut(lowCut_);
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
 
@@ -308,15 +309,21 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
     bypass_ = legacyValues[3];
 
     if (version >= 2) {
-        if (!stream.readDouble(lowCut80_) ||
-            !std::isfinite(lowCut80_)) {
+        double savedLowCut = 0.0;
+
+        if (!stream.readDouble(savedLowCut) ||
+            !std::isfinite(savedLowCut)) {
             return kResultFalse;
         }
 
-        lowCut80_ =
-            std::clamp(lowCut80_, 0.0, 1.0);
+        lowCut_ =
+            version >= 4
+                ? std::clamp(savedLowCut, 0.0, 1.0)
+                : (savedLowCut >= 0.5
+                    ? dsp::lowCutNormalizedFromFrequency(80.0)
+                    : 0.0);
     } else {
-        lowCut80_ = 0.0;
+        lowCut_ = 0.0;
     }
 
     if (version >= 3) {
@@ -332,7 +339,7 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
     }
 
     finisher_.setFinish(finish_);
-    finisher_.setLowCut80(lowCut80_ >= 0.5);
+    finisher_.setLowCut(lowCut_);
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
     finisher_.reset();
@@ -355,7 +362,7 @@ tresult PLUGIN_API Processor::getState(IBStream* state) {
         room_,
         output_,
         bypass_,
-        lowCut80_,
+        lowCut_,
         roomDecay_
     };
 

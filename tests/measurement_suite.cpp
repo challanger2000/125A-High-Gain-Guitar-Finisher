@@ -77,7 +77,7 @@ void process(
     MetalFinisherDSP dsp;
     dsp.prepare(sampleRate);
     dsp.setFinish(finish);
-    dsp.setLowCut80(false);
+    dsp.setLowCut(0.0);
 
     for (std::size_t i = 0; i < left.size(); ++i)
         dsp.processFrame(left[i], right[i]);

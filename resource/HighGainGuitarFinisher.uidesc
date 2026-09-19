@@ -60,7 +60,7 @@
     <view class="CTextLabel"
           origin="233,66"
           size="310,14"
-          title="POST-AMP / POST-CAB  •  INDUSTRIAL METAL"
+          title="POST-AMP / POST-CAB"
           transparent="true"
           font-color="Muted"
           font="Subtitle"

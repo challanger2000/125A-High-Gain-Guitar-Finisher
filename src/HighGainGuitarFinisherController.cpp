@@ -25,7 +25,7 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context) {
     // Keep the original ROOM parameter ID for backward compatibility,
     // but expose it as the wet/dry amount from state version 3 onward.
     parameters.addParameter(
-        STR16("Wet / Dry"), STR16("%"), 0, 0.0, automate, kRoom);
+        STR16("Wet"), STR16("%"), 0, 0.0, automate, kRoom);
 
     parameters.addParameter(
         STR16("Decay"), STR16("%"), 0, 0.5, automate, kRoomDecay);

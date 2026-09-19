@@ -390,9 +390,16 @@ void IndustrialRoom::processFrame(
     const std::array<double, 4>
         matrix {h0, h1, h2, h3};
 
+    // Keep the useful production range compact, but let the upper end
+    // open into a deliberately long, obvious industrial tail.
+    const double decayShape =
+        std::pow(
+            std::max(amount_, 0.0),
+            1.8);
+
     const double feedback =
         0.52 +
-        0.20 * amount_;
+        0.32 * decayShape;
 
     for (std::size_t line = 0;
          line < late_.size();
@@ -484,7 +491,7 @@ void IndustrialRoom::processFrame(
 
     const double duckGain =
         1.0 -
-        0.14 * duckActivity;
+        0.10 * duckActivity;
 
     const double wetCurve =
         std::pow(

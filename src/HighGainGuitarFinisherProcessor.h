@@ -25,6 +25,8 @@ public:
     Steinberg::tresult PLUGIN_API canProcessSampleSize(
         Steinberg::int32 symbolicSampleSize) override;
 
+    Steinberg::uint32 PLUGIN_API getTailSamples() override;
+
     Steinberg::tresult PLUGIN_API setupProcessing(
         Steinberg::Vst::ProcessSetup& setup) override;
 

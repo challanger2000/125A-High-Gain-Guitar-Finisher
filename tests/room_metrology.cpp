@@ -282,8 +282,9 @@ double verifyAudibleMaximum() {
         10.0 * std::log10(
             static_cast<double>(wetPower / dryPower));
 
-    HGGF_REQUIRE(wetToDryDb > -15.0);
-    HGGF_REQUIRE(wetToDryDb < -7.0);
+    // ROOM 100 is intentionally an obvious effect setting.
+    HGGF_REQUIRE(wetToDryDb > -10.0);
+    HGGF_REQUIRE(wetToDryDb < -2.5);
 
     return wetToDryDb;
 }
@@ -298,7 +299,7 @@ int main() {
     const double wetToDryDb =
         verifyAudibleMaximum();
 
-    constexpr double seconds = 3.0;
+    constexpr double seconds = 5.5;
 
     const std::size_t count =
         static_cast<std::size_t>(
@@ -357,8 +358,11 @@ int main() {
     const double veryLate =
         rmsWindow(left, right, 1.00, 1.50);
 
+    const double longTail =
+        rmsWindow(left, right, 2.00, 2.80);
+
     const double finalTail =
-        rmsWindow(left, right, 1.80, 2.40);
+        rmsWindow(left, right, 4.00, 5.00);
 
     HGGF_REQUIRE(early > 1.0e-6);
     HGGF_REQUIRE(mid > 1.0e-7);
@@ -369,18 +373,26 @@ int main() {
     const double veryLateToMid =
         db(veryLate / mid);
 
+    const double longTailToMid =
+        db(longTail / mid);
+
     const double finalToMid =
         db(finalTail / mid);
 
+    // At 100% the room must audibly ring after the guitar stops.
     HGGF_REQUIRE(
-        lateToMid > -20.0 &&
-        lateToMid < -8.0);
+        lateToMid > -12.0 &&
+        lateToMid < -2.0);
 
     HGGF_REQUIRE(
-        veryLateToMid > -42.0 &&
-        veryLateToMid < -22.0);
+        veryLateToMid > -25.0 &&
+        veryLateToMid < -7.0);
 
-    HGGF_REQUIRE(finalToMid < -45.0);
+    HGGF_REQUIRE(
+        longTailToMid > -45.0 &&
+        longTailToMid < -18.0);
+
+    HGGF_REQUIRE(finalToMid < -35.0);
 
     long double leftEnergy = 0.0L;
     long double rightEnergy = 0.0L;
@@ -459,7 +471,7 @@ int main() {
         << "First reflection: "
         << firstMs
         << " ms\n"
-        << "Early/mid/late/very-late/final RMS dB: "
+        << "Early/mid/late/very-late/long/final RMS dB: "
         << db(early)
         << " / "
         << db(mid)
@@ -467,6 +479,8 @@ int main() {
         << db(late)
         << " / "
         << db(veryLate)
+        << " / "
+        << db(longTail)
         << " / "
         << db(finalTail)
         << "\n"

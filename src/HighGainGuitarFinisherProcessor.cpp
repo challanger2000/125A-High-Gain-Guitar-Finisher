@@ -48,6 +48,20 @@ tresult PLUGIN_API Processor::canProcessSampleSize(int32 symbolicSampleSize) {
         : kResultFalse;
 }
 
+uint32 PLUGIN_API Processor::getTailSamples() {
+    // Report the maximum ROOM decay to the host even when ROOM is currently
+    // at zero. Hosts may cache this value, and a later ROOM automation change
+    // must not allow the reverb tail to be suspended or truncated.
+    constexpr double kMaximumTailSeconds = 5.0;
+
+    return static_cast<uint32>(
+        std::max(
+            1.0,
+            std::round(
+                sampleRate_ *
+                kMaximumTailSeconds)));
+}
+
 tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
     sampleRate_ = (std::isfinite(setup.sampleRate) && setup.sampleRate > 1000.0)
         ? setup.sampleRate

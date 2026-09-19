@@ -23,13 +23,13 @@ jobs:
       - name: Stage VST3 bundle
         shell: pwsh
         run: |
-          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter "125A High Gain Guitar Finisher.vst3" | Select-Object -First 1
-          if (-not $plugin) { throw "125A High Gain Guitar Finisher.vst3 bundle not found" }
+          $plugin = Get-ChildItem -Path build -Recurse -Directory -Filter "125A-High-Gain-Guitar-Finisher.vst3" | Select-Object -First 1
+          if (-not $plugin) { throw "125A-High-Gain-Guitar-Finisher.vst3 bundle not found" }
 
           New-Item -ItemType Directory -Force -Path artifact | Out-Null
           Copy-Item -Path $plugin.FullName -Destination artifact -Recurse -Force
 
-          if (-not (Test-Path "artifact\125A High Gain Guitar Finisher.vst3\Contents")) {
+          if (-not (Test-Path "artifact\125A-High-Gain-Guitar-Finisher.vst3\Contents")) {
             throw "Staged VST3 bundle is incomplete"
           }
 

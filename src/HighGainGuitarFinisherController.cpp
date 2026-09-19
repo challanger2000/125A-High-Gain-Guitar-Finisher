@@ -488,7 +488,7 @@ void Controller::willClose(
 
 tresult PLUGIN_API
 Controller::getParamStringByValue(
-    ParamID id,
+    Steinberg::Vst::ParamID id,
     ParamValue valueNormalized,
     String128 string) {
 

@@ -201,8 +201,8 @@
           mouse-enabled="false"/>
 
     <view class="CTextLabel"
-          origin="238,369"
-          size="186,14"
+          origin="223,369"
+          size="216,14"
           title="ADAPTIVE TIGHTNESS • BODY • HARSHNESS"
           transparent="true"
           font-color="Minor"

@@ -247,9 +247,9 @@ void SteelPanelView::draw(
     context->drawRect(
         VSTGUI::CRect(
             217.0,
-            126.0,
+            143.0,
             444.0,
-            130.0),
+            147.0),
         VSTGUI::kDrawFilled);
 
     context->setFillColor(
@@ -258,9 +258,9 @@ void SteelPanelView::draw(
     context->drawRect(
         VSTGUI::CRect(
             217.0,
-            126.0,
+            143.0,
             331.0,
-            130.0),
+            147.0),
         VSTGUI::kDrawFilled);
 
     const std::array<double, 5>
@@ -290,11 +290,11 @@ void SteelPanelView::draw(
         context->drawLine(
             VSTGUI::CPoint(
                 507.0 + inset,
-                300.0 +
+                314.0 +
                     roomLines[i] * 0.30),
             VSTGUI::CPoint(
                 696.0 - inset,
-                300.0 +
+                314.0 +
                     roomLines[i] * 0.30));
     }
 

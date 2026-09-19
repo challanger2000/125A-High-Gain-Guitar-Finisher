@@ -224,8 +224,13 @@ bool BrandLogoView::loadMaster() {
 
         xml.append(
             buffer.data(),
-            buffer.data() +
-                read);
+            static_cast<std::size_t>(
+                read));
+
+        if (read <
+            buffer.size()) {
+            break;
+        }
     }
 
     std::size_t position = 0;

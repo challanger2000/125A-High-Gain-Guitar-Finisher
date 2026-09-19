@@ -258,7 +258,7 @@ bool BrandLogoView::loadMaster() {
 
         const auto dStart =
             xml.find(
-                "d="",
+                "d=\\\"",
                 pathStart);
 
         if (dStart ==
@@ -291,7 +291,7 @@ bool BrandLogoView::loadMaster() {
 
         const auto fillStart =
             xml.find(
-                "fill="",
+                "fill=\\\"",
                 dataEnd);
 
         bool red = false;

@@ -52,7 +52,7 @@ uint32 PLUGIN_API Processor::getTailSamples() {
     // Report the maximum ROOM decay to the host even when ROOM is currently
     // at zero. Hosts may cache this value, and a later ROOM automation change
     // must not allow the reverb tail to be suspended or truncated.
-    constexpr double kMaximumTailSeconds = 5.0;
+    constexpr double kMaximumTailSeconds = 6.0;
 
     return static_cast<uint32>(
         std::max(
@@ -70,7 +70,8 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
     finisher_.prepare(sampleRate_);
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
-    finisher_.setRoom(room_);
+    finisher_.setRoomWet(room_);
+    finisher_.setRoomDecay(roomDecay_);
     lastBypassed_ = bypass_ >= 0.5;
 
     return AudioEffect::setupProcessing(setup);
@@ -117,6 +118,7 @@ void Processor::readParameterChanges(IParameterChanges* changes) {
         switch (queue->getParameterId()) {
             case kFinish:   finish_ = value; break;
             case kRoom:     room_ = value; break;
+            case kRoomDecay: roomDecay_ = value; break;
             case kOutput:   output_ = value; break;
             case kBypass:   bypass_ = value; break;
             case kLowCut80: lowCut80_ = value; break;
@@ -148,7 +150,8 @@ void Processor::processBlock(
 
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
-    finisher_.setRoom(room_);
+    finisher_.setRoomWet(room_);
+    finisher_.setRoomDecay(roomDecay_);
 
     for (int32 sample = 0; sample < numSamples; ++sample) {
         const Sample* inputLeft = inputs[0];
@@ -316,9 +319,22 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
         lowCut80_ = 0.0;
     }
 
+    if (version >= 3) {
+        if (!stream.readDouble(roomDecay_) ||
+            !std::isfinite(roomDecay_)) {
+            return kResultFalse;
+        }
+
+        roomDecay_ =
+            std::clamp(roomDecay_, 0.0, 1.0);
+    } else {
+        roomDecay_ = room_;
+    }
+
     finisher_.setFinish(finish_);
     finisher_.setLowCut80(lowCut80_ >= 0.5);
-    finisher_.setRoom(room_);
+    finisher_.setRoomWet(room_);
+    finisher_.setRoomDecay(roomDecay_);
     finisher_.reset();
     lastBypassed_ = bypass_ >= 0.5;
 
@@ -334,12 +350,13 @@ tresult PLUGIN_API Processor::getState(IBStream* state) {
     if (!stream.writeInt32(kStateVersion))
         return kResultFalse;
 
-    const double values[5] {
+    const double values[6] {
         finish_,
         room_,
         output_,
         bypass_,
-        lowCut80_
+        lowCut80_,
+        roomDecay_
     };
 
     for (const double value : values) {

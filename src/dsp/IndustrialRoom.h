@@ -12,15 +12,21 @@ class IndustrialRoom {
 public:
     void prepare(double sampleRate);
     void reset() noexcept;
-    void setAmount(double normalized) noexcept;
+
+    void setWetDry(double normalized) noexcept;
+    void setDecay(double normalized) noexcept;
 
     void processFrame(double inputLeft,
                       double inputRight,
                       double& wetLeft,
                       double& wetRight) noexcept;
 
-    double currentAmount() const noexcept {
-        return amount_;
+    double currentWetDry() const noexcept {
+        return wet_;
+    }
+
+    double currentDecay() const noexcept {
+        return decay_;
     }
 
 private:
@@ -58,10 +64,16 @@ private:
     std::array<double, 4> dampingState_ {};
 
     double sampleRate_ {44100.0};
-    double amountTarget_ {0.0};
-    double amount_ {0.0};
-    double amountSmoothing_ {0.0};
+
+    double wetTarget_ {0.0};
+    double wet_ {0.0};
+
+    double decayTarget_ {0.5};
+    double decay_ {0.5};
+
+    double controlSmoothing_ {0.0};
     double dampingCoefficient_ {0.0};
+
     double duckEnvelope_ {0.0};
     double duckAttack_ {0.0};
     double duckRelease_ {0.0};

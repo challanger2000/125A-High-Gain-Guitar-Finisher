@@ -67,8 +67,12 @@ void MetalFinisherDSP::setLowCut80(bool enabled) noexcept {
     lowCutTarget_ = enabled ? 1.0 : 0.0;
 }
 
-void MetalFinisherDSP::setRoom(double normalized) noexcept {
-    room_.setAmount(normalized);
+void MetalFinisherDSP::setRoomWet(double normalized) noexcept {
+    room_.setWetDry(normalized);
+}
+
+void MetalFinisherDSP::setRoomDecay(double normalized) noexcept {
+    room_.setDecay(normalized);
 }
 
 void MetalFinisherDSP::processFrame(

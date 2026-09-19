@@ -60,6 +60,7 @@ private:
     double sampleRate_ {44100.0};
     double finish_ {0.0};
     double room_ {0.0};
+    double roomDecay_ {0.5};
     double output_ {0.5};
     double bypass_ {0.0};
     double lowCut80_ {0.0};

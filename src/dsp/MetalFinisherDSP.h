@@ -16,7 +16,8 @@ public:
 
     void setFinish(double normalized) noexcept;
     void setLowCut80(bool enabled) noexcept;
-    void setRoom(double normalized) noexcept;
+    void setRoomWet(double normalized) noexcept;
+    void setRoomDecay(double normalized) noexcept;
 
     void processFrame(double& left, double& right) noexcept;
 

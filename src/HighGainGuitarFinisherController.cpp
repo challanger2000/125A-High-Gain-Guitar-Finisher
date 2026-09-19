@@ -22,8 +22,13 @@ tresult PLUGIN_API Controller::initialize(FUnknown* context) {
     parameters.addParameter(
         STR16("Finish"), STR16("%"), 0, 0.0, automate, kFinish);
 
+    // Keep the original ROOM parameter ID for backward compatibility,
+    // but expose it as the wet/dry amount from state version 3 onward.
     parameters.addParameter(
-        STR16("Room"), STR16("%"), 0, 0.0, automate, kRoom);
+        STR16("Wet / Dry"), STR16("%"), 0, 0.0, automate, kRoom);
+
+    parameters.addParameter(
+        STR16("Decay"), STR16("%"), 0, 0.5, automate, kRoomDecay);
 
     parameters.addParameter(
         new RangeParameter(
@@ -73,26 +78,61 @@ tresult PLUGIN_API Controller::setComponentState(IBStream* state) {
         kBypass
     };
 
+    double legacyRoom = 0.0;
+
     for (const auto id : legacyIds) {
         double value = 0.0;
-        if (!stream.readDouble(value) || !std::isfinite(value))
+
+        if (!stream.readDouble(value) ||
+            !std::isfinite(value)) {
             return kResultFalse;
+        }
+
+        const double normalized =
+            std::clamp(value, 0.0, 1.0);
 
         setParamNormalized(
             id,
-            std::clamp(value, 0.0, 1.0));
+            normalized);
+
+        if (id == kRoom)
+            legacyRoom = normalized;
     }
 
     if (version >= 2) {
         double lowCut = 0.0;
-        if (!stream.readDouble(lowCut) || !std::isfinite(lowCut))
+
+        if (!stream.readDouble(lowCut) ||
+            !std::isfinite(lowCut)) {
             return kResultFalse;
+        }
 
         setParamNormalized(
             kLowCut80,
             std::clamp(lowCut, 0.0, 1.0));
     } else {
-        setParamNormalized(kLowCut80, 0.0);
+        setParamNormalized(
+            kLowCut80,
+            0.0);
+    }
+
+    if (version >= 3) {
+        double decay = 0.0;
+
+        if (!stream.readDouble(decay) ||
+            !std::isfinite(decay)) {
+            return kResultFalse;
+        }
+
+        setParamNormalized(
+            kRoomDecay,
+            std::clamp(decay, 0.0, 1.0));
+    } else {
+        // The old ROOM macro controlled both wet level and tail length.
+        // Mapping its saved value to both new controls preserves that intent.
+        setParamNormalized(
+            kRoomDecay,
+            legacyRoom);
     }
 
     return kResultOk;

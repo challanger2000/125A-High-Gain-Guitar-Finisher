@@ -181,7 +181,7 @@ void IndustrialRoom::prepare(
     for (auto& filter : metalBand_)
         filter.setCoefficients(metalBand);
 
-    amountSmoothing_ =
+    controlSmoothing_ =
         timeCoefficient(
             sampleRate_,
             25.0);
@@ -229,17 +229,30 @@ void IndustrialRoom::clearTail() noexcept {
 
 void IndustrialRoom::reset() noexcept {
     clearTail();
-    amount_ = amountTarget_;
+    wet_ = wetTarget_;
+    decay_ = decayTarget_;
 }
 
-void IndustrialRoom::setAmount(
+void IndustrialRoom::setWetDry(
     double normalized) noexcept {
 
-    amountTarget_ =
+    wetTarget_ =
         std::clamp(
             std::isfinite(normalized)
                 ? normalized
                 : 0.0,
+            0.0,
+            1.0);
+}
+
+void IndustrialRoom::setDecay(
+    double normalized) noexcept {
+
+    decayTarget_ =
+        std::clamp(
+            std::isfinite(normalized)
+                ? normalized
+                : 0.5,
             0.0,
             1.0);
 }
@@ -256,19 +269,24 @@ void IndustrialRoom::processFrame(
     if (!std::isfinite(inputRight))
         inputRight = 0.0;
 
-    amount_ =
-        amountSmoothing_ * amount_ +
-        (1.0 - amountSmoothing_) *
-            amountTarget_;
+    wet_ =
+        controlSmoothing_ * wet_ +
+        (1.0 - controlSmoothing_) *
+            wetTarget_;
 
-    if (std::abs(
-            amount_ -
-            amountTarget_) < 1.0e-9) {
-        amount_ = amountTarget_;
-    }
+    decay_ =
+        controlSmoothing_ * decay_ +
+        (1.0 - controlSmoothing_) *
+            decayTarget_;
 
-    if (amountTarget_ <= 0.0 &&
-        amount_ <= 1.0e-7) {
+    if (std::abs(wet_ - wetTarget_) < 1.0e-9)
+        wet_ = wetTarget_;
+
+    if (std::abs(decay_ - decayTarget_) < 1.0e-9)
+        decay_ = decayTarget_;
+
+    if (wetTarget_ <= 0.0 &&
+        wet_ <= 1.0e-7) {
 
         if (!tailCleared_)
             clearTail();
@@ -390,16 +408,16 @@ void IndustrialRoom::processFrame(
     const std::array<double, 4>
         matrix {h0, h1, h2, h3};
 
-    // Keep the useful production range compact, but let the upper end
-    // open into a deliberately long, obvious industrial tail.
+    // DECAY is independent from wet level. The upper range deliberately
+    // opens into a long metallic tail while the middle range stays useful.
     const double decayShape =
         std::pow(
-            std::max(amount_, 0.0),
-            1.8);
+            std::max(decay_, 0.0),
+            1.6);
 
     const double feedback =
-        0.52 +
-        0.32 * decayShape;
+        0.50 +
+        0.38 * decayShape;
 
     for (std::size_t line = 0;
          line < late_.size();
@@ -441,12 +459,16 @@ void IndustrialRoom::processFrame(
         metalBand_[1].process(
             rawRight);
 
+    const double metalAmount =
+        0.10 +
+        0.20 * decay_;
+
     rawLeft +=
-        0.22 * amount_ *
+        metalAmount *
         metalLeft;
 
     rawRight +=
-        0.22 * amount_ *
+        metalAmount *
         metalRight;
 
     const double mid =
@@ -495,8 +517,8 @@ void IndustrialRoom::processFrame(
 
     const double wetCurve =
         std::pow(
-            std::max(amount_, 0.0),
-            1.15);
+            std::max(wet_, 0.0),
+            1.10);
 
     const double wetGain =
         0.55 *

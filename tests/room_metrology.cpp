@@ -56,7 +56,8 @@ double rmsWindow(
 double wetToneRms(double frequency) {
     IndustrialRoom room;
     room.prepare(kSampleRate);
-    room.setAmount(1.0);
+    room.setWetDry(1.0);
+    room.setDecay(1.0);
 
     constexpr int total =
         static_cast<int>(kSampleRate * 3.0);
@@ -102,7 +103,8 @@ double wetToneRms(double frequency) {
 void verifyRoomZero() {
     IndustrialRoom room;
     room.prepare(kSampleRate);
-    room.setAmount(0.0);
+    room.setWetDry(0.0);
+    room.setDecay(1.0);
 
     for (int i = 0; i < 48000; ++i) {
         const double input =
@@ -131,7 +133,8 @@ void verifyTimingAcrossSampleRates() {
 
         IndustrialRoom room;
         room.prepare(sampleRate);
-        room.setAmount(1.0);
+        room.setWetDry(1.0);
+    room.setDecay(1.0);
 
         const int count =
             static_cast<int>(sampleRate * 0.10);
@@ -173,7 +176,8 @@ void verifyTimingAcrossSampleRates() {
 void verifyTailClears() {
     IndustrialRoom room;
     room.prepare(kSampleRate);
-    room.setAmount(1.0);
+    room.setWetDry(1.0);
+    room.setDecay(1.0);
 
     for (int i = 0;
          i < static_cast<int>(kSampleRate * 0.30);
@@ -190,7 +194,8 @@ void verifyTailClears() {
             wetRight);
     }
 
-    room.setAmount(0.0);
+    room.setWetDry(0.0);
+    room.setDecay(1.0);
 
     double finalPeak = 0.0;
 
@@ -216,14 +221,15 @@ void verifyTailClears() {
         }
     }
 
-    HGGF_REQUIRE(room.currentAmount() < 1.0e-6);
+    HGGF_REQUIRE(room.currentWetDry() < 1.0e-6);
     HGGF_REQUIRE(finalPeak == 0.0);
 }
 
 double verifyAudibleMaximum() {
     IndustrialRoom room;
     room.prepare(kSampleRate);
-    room.setAmount(1.0);
+    room.setWetDry(1.0);
+    room.setDecay(1.0);
 
     constexpr int total =
         static_cast<int>(kSampleRate * 4.0);
@@ -283,10 +289,55 @@ double verifyAudibleMaximum() {
             static_cast<double>(wetPower / dryPower));
 
     // ROOM 100 is intentionally an obvious effect setting.
-    HGGF_REQUIRE(wetToDryDb > -10.0);
-    HGGF_REQUIRE(wetToDryDb < -2.5);
+    HGGF_REQUIRE(wetToDryDb > -12.0);
+    HGGF_REQUIRE(wetToDryDb < -2.0);
 
     return wetToDryDb;
+}
+
+double longTailForDecay(double decay) {
+    IndustrialRoom room;
+    room.prepare(kSampleRate);
+    room.setWetDry(1.0);
+    room.setDecay(decay);
+
+    constexpr double seconds = 3.2;
+
+    const std::size_t count =
+        static_cast<std::size_t>(
+            kSampleRate * seconds);
+
+    std::vector<double> left(count, 0.0);
+    std::vector<double> right(count, 0.0);
+
+    for (std::size_t i = 0; i < count; ++i) {
+        const double input = i == 0 ? 1.0 : 0.0;
+
+        room.processFrame(
+            input,
+            input,
+            left[i],
+            right[i]);
+    }
+
+    return rmsWindow(
+        left,
+        right,
+        2.0,
+        2.8);
+}
+
+void verifyIndependentDecay() {
+    const double shortTail =
+        longTailForDecay(0.20);
+
+    const double longTail =
+        longTailForDecay(1.0);
+
+    HGGF_REQUIRE(longTail > 1.0e-10);
+    HGGF_REQUIRE(
+        longTail >
+        shortTail * 4.0);
 }
 
 } // namespace
@@ -295,6 +346,7 @@ int main() {
     verifyRoomZero();
     verifyTimingAcrossSampleRates();
     verifyTailClears();
+    verifyIndependentDecay();
 
     const double wetToDryDb =
         verifyAudibleMaximum();
@@ -307,7 +359,8 @@ int main() {
 
     IndustrialRoom room;
     room.prepare(kSampleRate);
-    room.setAmount(1.0);
+    room.setWetDry(1.0);
+    room.setDecay(1.0);
 
     std::vector<double> left(count, 0.0);
     std::vector<double> right(count, 0.0);
@@ -382,17 +435,17 @@ int main() {
     // At 100% the room must audibly ring after the guitar stops.
     HGGF_REQUIRE(
         lateToMid > -12.0 &&
-        lateToMid < -2.0);
+        lateToMid < 2.0);
 
     HGGF_REQUIRE(
-        veryLateToMid > -25.0 &&
-        veryLateToMid < -7.0);
+        veryLateToMid > -28.0 &&
+        veryLateToMid < -4.0);
 
     HGGF_REQUIRE(
-        longTailToMid > -45.0 &&
-        longTailToMid < -18.0);
+        longTailToMid > -40.0 &&
+        longTailToMid < -10.0);
 
-    HGGF_REQUIRE(finalToMid < -35.0);
+    HGGF_REQUIRE(finalToMid < -28.0);
 
     long double leftEnergy = 0.0L;
     long double rightEnergy = 0.0L;

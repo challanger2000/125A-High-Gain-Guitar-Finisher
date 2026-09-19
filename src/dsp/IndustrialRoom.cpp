@@ -10,10 +10,12 @@ namespace {
 constexpr double kPi =
     3.141592653589793238462643383279502884;
 
-constexpr std::array<double, 4> kEarlyGain {
-    0.34,
+constexpr std::array<double, 6> kEarlyGain {
+    0.48,
+    -0.37,
+    0.31,
     0.25,
-    -0.18,
+    -0.19,
     0.14
 };
 
@@ -108,24 +110,28 @@ void IndustrialRoom::prepare(
             : 44100.0;
 
     earlyDelayLeft_ = {
-        toSamples(sampleRate_, 11.3),
-        toSamples(sampleRate_, 17.9),
-        toSamples(sampleRate_, 26.7),
-        toSamples(sampleRate_, 37.1)
+        toSamples(sampleRate_, 15.7),
+        toSamples(sampleRate_, 24.9),
+        toSamples(sampleRate_, 36.1),
+        toSamples(sampleRate_, 49.3),
+        toSamples(sampleRate_, 63.7),
+        toSamples(sampleRate_, 79.1)
     };
 
     earlyDelayRight_ = {
-        toSamples(sampleRate_, 13.1),
-        toSamples(sampleRate_, 20.3),
-        toSamples(sampleRate_, 29.9),
-        toSamples(sampleRate_, 40.7)
+        toSamples(sampleRate_, 18.1),
+        toSamples(sampleRate_, 28.7),
+        toSamples(sampleRate_, 40.9),
+        toSamples(sampleRate_, 54.7),
+        toSamples(sampleRate_, 69.5),
+        toSamples(sampleRate_, 84.7)
     };
 
     lateDelay_ = {
-        toSamples(sampleRate_, 47.9),
-        toSamples(sampleRate_, 59.3),
-        toSamples(sampleRate_, 71.1),
-        toSamples(sampleRate_, 83.7)
+        toSamples(sampleRate_, 71.3),
+        toSamples(sampleRate_, 89.9),
+        toSamples(sampleRate_, 113.7),
+        toSamples(sampleRate_, 139.3)
     };
 
     const auto maxEarly =
@@ -151,20 +157,29 @@ void IndustrialRoom::prepare(
     const auto highPass =
         makeHighPass(
             sampleRate_,
-            180.0,
+            170.0,
             0.7071067811865476);
 
     const auto lowPass =
         makeLowPass(
             sampleRate_,
-            6200.0,
+            6500.0,
             0.7071067811865476);
+
+    const auto metalBand =
+        makeBandPass(
+            sampleRate_,
+            2100.0,
+            1.1);
 
     for (auto& filter : inputHighPass_)
         filter.setCoefficients(highPass);
 
     for (auto& filter : outputLowPass_)
         filter.setCoefficients(lowPass);
+
+    for (auto& filter : metalBand_)
+        filter.setCoefficients(metalBand);
 
     amountSmoothing_ =
         timeCoefficient(
@@ -181,12 +196,12 @@ void IndustrialRoom::prepare(
     duckAttack_ =
         timeCoefficient(
             sampleRate_,
-            2.0);
+            3.0);
 
     duckRelease_ =
         timeCoefficient(
             sampleRate_,
-            140.0);
+            100.0);
 
     reset();
 }
@@ -202,6 +217,9 @@ void IndustrialRoom::clearTail() noexcept {
         filter.reset();
 
     for (auto& filter : outputLowPass_)
+        filter.reset();
+
+    for (auto& filter : metalBand_)
         filter.reset();
 
     dampingState_.fill(0.0);
@@ -346,35 +364,35 @@ void IndustrialRoom::processFrame(
             dampingState_[3]);
 
     const double injectionLeft =
-        0.58 * earlyLeft +
-        0.10 * hpLeft;
+        0.80 * earlyLeft +
+        0.16 * hpLeft;
 
     const double injectionRight =
-        0.58 * earlyRight +
-        0.10 * hpRight;
+        0.80 * earlyRight +
+        0.16 * hpRight;
 
     const std::array<double, 4>
         injection {
 
         injectionLeft +
-            0.15 * injectionRight,
+            0.18 * injectionRight,
 
         injectionRight -
-            0.15 * injectionLeft,
+            0.18 * injectionLeft,
 
-        0.70 * injectionLeft -
-            0.25 * injectionRight,
+        0.72 * injectionLeft -
+            0.28 * injectionRight,
 
-        0.70 * injectionRight +
-            0.25 * injectionLeft
+        0.72 * injectionRight +
+            0.28 * injectionLeft
     };
 
     const std::array<double, 4>
         matrix {h0, h1, h2, h3};
 
     const double feedback =
-        0.48 +
-        0.18 * amount_;
+        0.52 +
+        0.20 * amount_;
 
     for (std::size_t line = 0;
          line < late_.size();
@@ -387,26 +405,42 @@ void IndustrialRoom::processFrame(
     }
 
     const double lateLeft =
-        0.28 * delayed[0] +
-        0.22 * delayed[1] -
-        0.18 * delayed[2] +
-        0.16 * delayed[3];
+        0.34 * delayed[0] +
+        0.27 * delayed[1] -
+        0.22 * delayed[2] +
+        0.20 * delayed[3];
 
     const double lateRight =
-        0.16 * delayed[0] -
-        0.18 * delayed[1] +
-        0.22 * delayed[2] +
-        0.28 * delayed[3];
+        0.20 * delayed[0] -
+        0.22 * delayed[1] +
+        0.27 * delayed[2] +
+        0.34 * delayed[3];
 
     double rawLeft =
         outputLowPass_[0].process(
             earlyLeft +
-            0.90 * lateLeft);
+            1.15 * lateLeft);
 
     double rawRight =
         outputLowPass_[1].process(
             earlyRight +
-            0.90 * lateRight);
+            1.15 * lateRight);
+
+    const double metalLeft =
+        metalBand_[0].process(
+            rawLeft);
+
+    const double metalRight =
+        metalBand_[1].process(
+            rawRight);
+
+    rawLeft +=
+        0.22 * amount_ *
+        metalLeft;
+
+    rawRight +=
+        0.22 * amount_ *
+        metalRight;
 
     const double mid =
         0.5 * (
@@ -417,7 +451,7 @@ void IndustrialRoom::processFrame(
         0.5 * (
             rawLeft -
             rawRight) *
-        0.72;
+        0.90;
 
     rawLeft =
         mid + side;
@@ -443,18 +477,23 @@ void IndustrialRoom::processFrame(
 
     const double duckActivity =
         std::clamp(
-            (duckEnvelope_ - 0.025) /
-                0.225,
+            (duckEnvelope_ - 0.070) /
+                0.250,
             0.0,
             1.0);
 
     const double duckGain =
         1.0 -
-        0.42 * duckActivity;
+        0.18 * duckActivity;
+
+    const double wetCurve =
+        std::pow(
+            std::max(amount_, 0.0),
+            1.15);
 
     const double wetGain =
-        0.22 *
-        amount_ *
+        0.38 *
+        wetCurve *
         duckGain;
 
     wetLeft =

@@ -48,12 +48,13 @@ private:
     CircularDelay earlyRight_ {};
     std::array<CircularDelay, 4> late_ {};
 
-    std::array<std::size_t, 4> earlyDelayLeft_ {};
-    std::array<std::size_t, 4> earlyDelayRight_ {};
+    std::array<std::size_t, 6> earlyDelayLeft_ {};
+    std::array<std::size_t, 6> earlyDelayRight_ {};
     std::array<std::size_t, 4> lateDelay_ {};
 
     std::array<Biquad, 2> inputHighPass_ {};
     std::array<Biquad, 2> outputLowPass_ {};
+    std::array<Biquad, 2> metalBand_ {};
     std::array<double, 4> dampingState_ {};
 
     double sampleRate_ {44100.0};

@@ -96,7 +96,11 @@ tresult PLUGIN_API Processor::setProcessing(TBool state) {
     if (state)
         finisher_.reset();
 
-    return AudioEffect::setProcessing(state);
+    // Steinberg AudioEffect::setProcessing() deliberately returns
+    // kNotImplemented. Hosts and lifecycle tests expect our concrete
+    // processor to acknowledge the transition explicitly.
+    AudioEffect::setProcessing(state);
+    return kResultTrue;
 }
 
 void Processor::readParameterChanges(IParameterChanges* changes) {

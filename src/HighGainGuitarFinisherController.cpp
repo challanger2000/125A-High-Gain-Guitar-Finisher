@@ -530,6 +530,44 @@ Controller::getParamStringByValue(
 }
 
 tresult PLUGIN_API
+Controller::getParamValueByString(
+    Steinberg::Vst::ParamID id,
+    Steinberg::Vst::TChar* string,
+    ParamValue& valueNormalized) {
+
+    if (!string)
+        return kInvalidArgument;
+
+    if (id == kFinish ||
+        id == kRoom ||
+        id == kRoomDecay) {
+
+        UString value(
+            string,
+            strlen16(string));
+
+        ParamValue percent = 0.0;
+
+        if (!value.scanFloat(percent))
+            return kResultFalse;
+
+        valueNormalized =
+            std::clamp(
+                percent / 100.0,
+                0.0,
+                1.0);
+
+        return kResultTrue;
+    }
+
+    return EditController::
+        getParamValueByString(
+            id,
+            string,
+            valueNormalized);
+}
+
+tresult PLUGIN_API
 Controller::setComponentState(
     IBStream* state) {
 

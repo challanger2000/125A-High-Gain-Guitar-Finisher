@@ -41,6 +41,11 @@ public:
         Steinberg::Vst::ParamValue valueNormalized,
         Steinberg::Vst::String128 string) override;
 
+    Steinberg::tresult PLUGIN_API getParamValueByString(
+        Steinberg::Vst::ParamID id,
+        Steinberg::Vst::TChar* string,
+        Steinberg::Vst::ParamValue& valueNormalized) override;
+
     VSTGUI::CView* createCustomView(
         VSTGUI::UTF8StringPtr name,
         const VSTGUI::UIAttributes& attributes,

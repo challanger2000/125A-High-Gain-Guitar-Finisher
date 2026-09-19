@@ -484,7 +484,7 @@ void IndustrialRoom::processFrame(
 
     const double duckGain =
         1.0 -
-        0.18 * duckActivity;
+        0.14 * duckActivity;
 
     const double wetCurve =
         std::pow(
@@ -492,7 +492,7 @@ void IndustrialRoom::processFrame(
             1.15);
 
     const double wetGain =
-        0.38 *
+        0.55 *
         wetCurve *
         duckGain;
 

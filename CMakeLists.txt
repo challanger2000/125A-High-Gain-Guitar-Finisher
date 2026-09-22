@@ -12,9 +12,9 @@ include(ProjectWarnings)
 # Keep this project self-contained and reproducible.
 # Do not use or modify a globally installed VST3 SDK.
 set(SMTG_ENABLE_VST3_PLUGIN_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SMTG_ENABLE_VST3_HOSTING_EXAMPLES ON CACHE BOOL "" FORCE)
 set(SMTG_ENABLE_VSTGUI_SUPPORT ON CACHE BOOL "" FORCE)
-set(SMTG_RUN_VST_VALIDATOR OFF CACHE BOOL "" FORCE)
+set(SMTG_RUN_VST_VALIDATOR ON CACHE BOOL "" FORCE)
 
 # CI/builds should create the bundle only, not install/link it into the
 # current user's VST3 folder. The artifact staging step handles distribution.

@@ -31,7 +31,7 @@ void AutoLevelCompensator::prepare(
     // Programme energy is learned slowly enough to ignore individual
     // pick transients and palm-mute peaks.
     energyCoefficient_ =
-        timeCoefficient(sampleRate_, 500.0);
+        timeCoefficient(sampleRate_, 850.0);
 
     // Independent activity memory closes the gate much faster than the
     // programme-energy window. This prevents a previous phrase from keeping
@@ -42,10 +42,21 @@ void AutoLevelCompensator::prepare(
     // Makeup rises slowly so it cannot act like another compressor.
     // It returns to unity faster when the required compensation falls.
     gainUpCoefficient_ =
-        timeCoefficient(sampleRate_, 750.0);
+        timeCoefficient(sampleRate_, 900.0);
 
     gainDownCoefficient_ =
-        timeCoefficient(sampleRate_, 250.0);
+        timeCoefficient(sampleRate_, 450.0);
+
+    // The first part of a phrase needs quicker compensation because the
+    // optimizer starts correcting immediately. Afterwards the slower
+    // programme coefficients prevent palm-mute/chord pumping.
+    bootstrapCoefficient_ =
+        timeCoefficient(sampleRate_, 110.0);
+
+    bootstrapLengthSamples_ =
+        static_cast<int>(
+            std::llround(
+                sampleRate_ * 0.35));
 
     minGain_ =
         std::pow(10.0, -3.0 / 20.0);
@@ -65,6 +76,8 @@ void AutoLevelCompensator::reset() noexcept {
     outputEnergy_ = 0.0;
     activityEnergy_ = 0.0;
     gain_ = 1.0;
+    bootstrapSamplesRemaining_ =
+        bootstrapLengthSamples_;
 }
 
 double AutoLevelCompensator::currentGainDb() const noexcept {
@@ -128,12 +141,23 @@ void AutoLevelCompensator::processFrame(
         // phrase instead of carrying the previous tone's ratio forward.
         inputEnergy_ = 0.0;
         outputEnergy_ = 0.0;
+        bootstrapSamplesRemaining_ =
+            bootstrapLengthSamples_;
     }
 
+    const bool bootstrapActive =
+        activityEnergy_ > gateEnergy_ &&
+        bootstrapSamplesRemaining_ > 0;
+
+    if (bootstrapActive)
+        --bootstrapSamplesRemaining_;
+
     const double coefficient =
-        targetGain > gain_
-            ? gainUpCoefficient_
-            : gainDownCoefficient_;
+        bootstrapActive
+            ? bootstrapCoefficient_
+            : (targetGain > gain_
+                ? gainUpCoefficient_
+                : gainDownCoefficient_);
 
     gain_ =
         coefficient * gain_ +

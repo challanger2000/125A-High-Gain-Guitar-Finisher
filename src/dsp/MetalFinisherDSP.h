@@ -73,8 +73,10 @@ public:
 
 private:
     std::array<Biquad, 2> lowCut_ {};
-    std::array<Biquad, 2> levelCoreHighPass_ {};
-    std::array<Biquad, 2> levelCoreLowPass_ {};
+    std::array<Biquad, 2> protectSubDry_ {};
+    std::array<Biquad, 2> protectSubWet_ {};
+    std::array<Biquad, 2> protectAirDry_ {};
+    std::array<Biquad, 2> protectAirWet_ {};
 
     AdaptiveBandController lowEnd_ {};
     AdaptiveBandController body_ {};

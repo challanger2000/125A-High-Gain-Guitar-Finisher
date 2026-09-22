@@ -423,6 +423,35 @@ int main() {
         articulationBalanced.finalArticulationCorrection >
         -0.03);
 
+    // A broadly balanced fixture is not a tonal reference. It is a safety
+    // regression: no single adaptive zone should jump close to its maximum
+    // authority when there is no deliberately exaggerated problem.
+    const auto alreadyBalanced =
+        runScenario(
+            0.16,
+            0.22,
+            0.18,
+            0.16,
+            0.10,
+            false);
+
+    std::cerr
+        << "Already-balanced intervention low/body/articulation/harsh/fizz: "
+        << alreadyBalanced.maxLow << " / "
+        << alreadyBalanced.maxBodyCut << " / "
+        << alreadyBalanced.finalArticulationCorrection << " / "
+        << alreadyBalanced.maxHarsh << " / "
+        << alreadyBalanced.maxFizz << "\n";
+
+    HGGF_REQUIRE(alreadyBalanced.maxLow < 0.20);
+    HGGF_REQUIRE(alreadyBalanced.maxBodyCut < 0.22);
+    HGGF_REQUIRE(
+        std::abs(
+            alreadyBalanced.finalArticulationCorrection) <
+        0.12);
+    HGGF_REQUIRE(alreadyBalanced.maxHarsh < 0.25);
+    HGGF_REQUIRE(alreadyBalanced.maxFizz < 0.25);
+
     const auto harshFizzHeavy =
         runScenario(
             0.10,
@@ -555,6 +584,12 @@ int main() {
         << harshFizzHeavy.maxHarsh << "\n"
         << "Fizz reduction: "
         << harshFizzHeavy.maxFizz << "\n"
+        << "Already-balanced low/body/articulation/harsh/fizz: "
+        << alreadyBalanced.maxLow << " / "
+        << alreadyBalanced.maxBodyCut << " / "
+        << alreadyBalanced.finalArticulationCorrection << " / "
+        << alreadyBalanced.maxHarsh << " / "
+        << alreadyBalanced.maxFizz << "\n"
         << "Multi-problem low/body/articulation/harsh/fizz: "
         << multiProblem.maxLow << " / "
         << multiProblem.maxBodyCut << " / "

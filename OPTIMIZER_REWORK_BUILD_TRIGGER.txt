@@ -1,2 +1,2 @@
-Optimizer rework verification build 3
-Reason: verify parallel five-zone optimizer, bidirectional level match, stronger room ducking and updated metrology.
+Optimizer rework verification build 4
+Reason: measure articulation dominance and verify parallel multi-problem behavior.

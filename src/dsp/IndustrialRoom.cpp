@@ -157,13 +157,13 @@ void IndustrialRoom::prepare(
     const auto highPass =
         makeHighPass(
             sampleRate_,
-            170.0,
+            200.0,
             0.7071067811865476);
 
     const auto lowPass =
         makeLowPass(
             sampleRate_,
-            6500.0,
+            6000.0,
             0.7071067811865476);
 
     const auto metalBand =
@@ -224,6 +224,7 @@ void IndustrialRoom::clearTail() noexcept {
 
     dampingState_.fill(0.0);
     duckEnvelope_ = 0.0;
+    duckGain_ = 1.0;
     tailCleared_ = true;
 }
 
@@ -506,14 +507,14 @@ void IndustrialRoom::processFrame(
 
     const double duckActivity =
         std::clamp(
-            (duckEnvelope_ - 0.070) /
-                0.250,
+            (duckEnvelope_ - 0.050) /
+                0.240,
             0.0,
             1.0);
 
-    const double duckGain =
+    duckGain_ =
         1.0 -
-        0.10 * duckActivity;
+        0.32 * duckActivity;
 
     const double wetCurve =
         std::pow(
@@ -523,7 +524,7 @@ void IndustrialRoom::processFrame(
     const double wetGain =
         0.55 *
         wetCurve *
-        duckGain;
+        duckGain_;
 
     wetLeft =
         rawLeft * wetGain;

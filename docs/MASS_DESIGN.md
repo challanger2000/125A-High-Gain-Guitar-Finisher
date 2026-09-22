@@ -64,3 +64,47 @@ MASS must keep the following properties:
 - ROOM receives the already MASS-shaped guitar signal
 
 A stronger MASS curve should only replace this design if real-programme measurements show a clear improvement without increased loudness bias or excessive sub energy.
+
+
+## Full FINISH + MASS real-audio validation
+
+MASS was also evaluated after the complete FINISH path, matching its actual production position before ROOM.
+
+### Bannockburn medians at MASS 100%
+
+Mode 1:
+- broad bands: +0.91 / +0.36 / -1.06 / +0.20 / -1.19 / -1.05 / +0.10 dB
+- RMS delta: about -0.23 dB
+- sample-peak delta: about -0.23 dB
+
+Mode 2:
+- broad bands: +0.60 / -0.44 / -1.43 / +0.37 / -0.04 / -1.93 / -0.15 dB
+- RMS delta: about -0.20 dB
+- sample-peak delta: about -0.04 dB
+
+Mode 3:
+- broad bands: +0.84 / +0.76 / -0.42 / +0.06 / -2.60 / -3.13 / -0.10 dB
+- RMS delta: about -0.22 dB
+- sample-peak delta: about -0.48 dB
+
+### Renesans representative-window medians at MASS 100%
+
+Mode 1:
+- broad bands: +0.56 / -1.04 / +0.51 / +2.61 / -0.93 / -0.84 / +0.15 dB
+- RMS delta: about -0.36 dB
+- sample-peak delta: about +0.03 dB
+
+Mode 2:
+- broad bands: +0.45 / -1.33 / +0.36 / +2.74 / +0.98 / -0.94 / -0.05 dB
+- RMS delta: about -0.32 dB
+- sample-peak delta: about +0.29 dB
+
+Mode 3:
+- broad bands: +0.61 / -0.15 / +0.36 / +1.64 / -2.48 / -2.60 / -0.15 dB
+- RMS delta: about -0.22 dB
+- sample-peak delta: about 0.00 dB
+
+Band order:
+20-80 / 80-200 / 200-640 / 640-2500 / 2500-5000 / 5000-10000 / 10000-20000 Hz.
+
+The combined results support keeping the conservative MASS curve. It increases perceived foundation relative to the already-finished signal while adding low-mid cleanup, without creating large peak growth or broad loudness inflation.

@@ -34,6 +34,7 @@ private:
     double gainUpCoefficient_ {0.0};
     double gainDownCoefficient_ {0.0};
 
+    double minGain_ {1.0};
     double maxGain_ {1.0};
     double gateEnergy_ {0.0};
 };

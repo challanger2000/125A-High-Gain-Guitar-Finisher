@@ -30,8 +30,16 @@ public:
         return body_.currentReduction();
     }
 
+    double currentArticulationCorrection() const noexcept {
+        return articulation_.currentReduction();
+    }
+
     double currentHarshnessReduction() const noexcept {
         return harshness_.currentReduction();
+    }
+
+    double currentFizzReduction() const noexcept {
+        return fizz_.currentReduction();
     }
 
     double currentAutoLevelGainDb() const noexcept {
@@ -46,8 +54,16 @@ public:
         return body_.selectedFrequency();
     }
 
+    double detectedArticulationFrequency() const noexcept {
+        return articulation_.selectedFrequency();
+    }
+
     double detectedHarshnessFrequency() const noexcept {
         return harshness_.selectedFrequency();
+    }
+
+    double detectedFizzFrequency() const noexcept {
+        return fizz_.selectedFrequency();
     }
 
 private:
@@ -55,7 +71,9 @@ private:
 
     AdaptiveBandController lowEnd_ {};
     AdaptiveBandController body_ {};
+    AdaptiveBandController articulation_ {};
     AdaptiveBandController harshness_ {};
+    AdaptiveBandController fizz_ {};
     AutoLevelCompensator autoLevel_ {};
     IndustrialRoom room_ {};
 

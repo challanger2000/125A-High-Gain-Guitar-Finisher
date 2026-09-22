@@ -34,6 +34,10 @@ public:
 
     double selectedFrequency() const noexcept;
 
+    double currentDominance() const noexcept {
+        return dominance_;
+    }
+
 private:
     static double timeCoefficient(double sampleRate,
                                   double milliseconds) noexcept;
@@ -52,6 +56,7 @@ private:
     double wideFastEnergy_ {0.0};
     double wideSlowEnergy_ {0.0};
     double reduction_ {0.0};
+    double dominance_ {0.0};
 
     double fastAttack_ {0.0};
     double fastRelease_ {0.0};

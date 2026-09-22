@@ -94,6 +94,7 @@ void AdaptiveBandController::reset() noexcept {
     wideFastEnergy_ = 0.0;
     wideSlowEnergy_ = 0.0;
     reduction_ = 0.0;
+    dominance_ = 0.0;
     selected_ = 0;
     selectionCounter_ = 0;
 }
@@ -223,6 +224,8 @@ void AdaptiveBandController::processFrame(
     const double dominance = std::sqrt(
         selectedSlow /
         (wideSlowEnergy_ + kEpsilon));
+
+    dominance_ = dominance;
 
     if (mode_ == AdaptiveBandMode::BodyResonance) {
         const double resonanceExcess =

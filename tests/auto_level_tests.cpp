@@ -103,6 +103,56 @@ void verifyDirectCompensation(
     }
 }
 
+void verifyFastPhraseBootstrap() {
+    constexpr double sampleRate = 48000.0;
+
+    for (const double scale :
+         {0.75, 1.33}) {
+
+        AutoLevelCompensator level;
+        level.prepare(sampleRate);
+
+        const int count =
+            static_cast<int>(
+                sampleRate * 0.25);
+
+        for (int i = 0; i < count; ++i) {
+            const double time =
+                static_cast<double>(i) /
+                sampleRate;
+
+            const double reference =
+                0.35 * std::sin(
+                    2.0 * pi * 120.0 * time) +
+                0.22 * std::sin(
+                    2.0 * pi * 1600.0 * time) +
+                0.12 * std::sin(
+                    2.0 * pi * 4300.0 * time);
+
+            double left =
+                reference * scale;
+
+            double right = left;
+
+            level.processFrame(
+                reference,
+                reference,
+                left,
+                right);
+        }
+
+        if (scale < 1.0) {
+            HGGF_REQUIRE(
+                level.currentGainDb() >
+                1.5);
+        } else {
+            HGGF_REQUIRE(
+                level.currentGainDb() <
+                -1.5);
+        }
+    }
+}
+
 void verifyFinishZeroAfterMakeup() {
     constexpr double sampleRate = 48000.0;
 
@@ -220,6 +270,7 @@ int main() {
             2.00);
     }
 
+    verifyFastPhraseBootstrap();
     verifyFinishZeroAfterMakeup();
     verifySilenceReturn();
 

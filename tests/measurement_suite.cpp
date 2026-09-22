@@ -164,6 +164,10 @@ int main() {
         HGGFTests::linearToDb(
             outputMetrics.rms / inputMetrics.rms);
 
+    const double peakDelta =
+        HGGFTests::linearToDb(
+            outputMetrics.peak / inputMetrics.peak);
+
     const double subDelta =
         HGGFTests::energyDeltaDb(
             inputBands.sub20To80,
@@ -201,6 +205,12 @@ int main() {
     // Auto-level must remove loudness bias without forcing exact peak matching.
     HGGF_REQUIRE(rmsDelta > -0.35);
     HGGF_REQUIRE(rmsDelta < 0.35);
+
+    // At neutral OUTPUT the optimizer must not create large new sample peaks.
+    // A future peak-catcher is only justified if real material breaks this
+    // guard consistently; do not add limiting merely for loudness.
+    HGGF_REQUIRE(peakDelta > -2.0);
+    HGGF_REQUIRE(peakDelta < 1.0);
     HGGF_REQUIRE(makeupDb >= -3.0001);
     HGGF_REQUIRE(makeupDb <= 3.0001);
 
@@ -224,6 +234,7 @@ int main() {
     std::cout
         << "Measurement suite passed\n"
         << "RMS delta: " << rmsDelta << " dB\n"
+        << "Peak delta: " << peakDelta << " dB\n"
         << "Auto-level makeup: "
         << makeupDb << " dB\n"
         << "Crest input/output: "

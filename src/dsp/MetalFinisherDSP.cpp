@@ -127,9 +127,8 @@ void MetalFinisherDSP::setFinish(double normalized) noexcept {
 
     finish_ = next;
 
-    // Do not freeze adaptive IIR/detector state while FINISH is off.
-    // Reset once at the transition to exact zero so a later re-enable
-    // cannot revive stale filter history from an earlier guitar phrase.
+    // Reset once at the transition to exact zero so a later re-enable cannot
+    // revive stale detector, level-match or protection-filter history.
     if (wasActive &&
         finish_ <= 0.0) {
 
@@ -218,17 +217,13 @@ void MetalFinisherDSP::updateModeTargets() noexcept {
             ? 0
             : (modeTarget_ < 0.75 ? 1 : 2);
 
-    // Mode 1 is the already validated neutral/modern baseline.
-    // Mode 2 is the bite profile: it preserves substantially more upper-mid
-    // attack while still controlling fizz. Mode 3 keeps more mass while
-    // controlling the top end more strongly.
     if (mode == 0) {
         modeWeightTargets_ = {
-            1.00, // chug
-            1.00, // body
-            1.00, // articulation
-            1.00, // harshness
-            1.00  // fizz
+            1.00,
+            1.00,
+            1.00,
+            1.00,
+            1.00
         };
     } else if (mode == 1) {
         modeWeightTargets_ = {
@@ -311,9 +306,6 @@ void MetalFinisherDSP::processFrame(
     double processedRight = baseRight;
 
     if (finish_ > 0.0) {
-        // Each optimizer zone analyses the same pre-optimizer signal.
-        // This avoids order-dependent decisions (for example a body cut
-        // changing what the harshness detector sees).
         double lowLeft = baseLeft;
         double lowRight = baseRight;
         double bodyLeft = baseLeft;
@@ -325,25 +317,13 @@ void MetalFinisherDSP::processFrame(
         double fizzLeft = baseLeft;
         double fizzRight = baseRight;
 
-        lowEnd_.processFrame(
-            lowLeft,
-            lowRight);
-
-        body_.processFrame(
-            bodyLeft,
-            bodyRight);
-
+        lowEnd_.processFrame(lowLeft, lowRight);
+        body_.processFrame(bodyLeft, bodyRight);
         articulation_.processFrame(
             articulationLeft,
             articulationRight);
-
-        harshness_.processFrame(
-            harshLeft,
-            harshRight);
-
-        fizz_.processFrame(
-            fizzLeft,
-            fizzRight);
+        harshness_.processFrame(harshLeft, harshRight);
+        fizz_.processFrame(fizzLeft, fizzRight);
 
         for (std::size_t i = 0;
              i < modeWeights_.size();
@@ -368,38 +348,43 @@ void MetalFinisherDSP::processFrame(
             modeWeights_[3] * (harshRight - baseRight) +
             modeWeights_[4] * (fizzRight - baseRight);
 
-        processedLeft =
-            baseLeft +
-            correctionLeft * finish_;
+        // Build the complete 100% optimizer result first. FINISH is applied
+        // only after adaptive correction, automatic level matching and edge
+        // protection, making it a mathematically true linear amount control.
+        double fullLeft =
+            baseLeft + correctionLeft;
 
-        processedRight =
-            baseRight +
-            correctionRight * finish_;
+        double fullRight =
+            baseRight + correctionRight;
 
         autoLevel_.processFrame(
             baseLeft,
             baseRight,
-            processedLeft,
-            processedRight);
+            fullLeft,
+            fullRight);
 
-        // The level matcher is global for a fair A/B, but its makeup must not
-        // create a broadband sub/air lift. Cancel only that makeup at the
-        // spectrum edges with slowly updated shelves. The optimizer's core
-        // 80 Hz-10 kHz decisions remain untouched.
         if (--makeupShelfCoefficientCountdown_ <= 0) {
             updateMakeupShelfCoefficients();
             makeupShelfCoefficientCountdown_ = 16;
         }
 
-        processedLeft =
+        fullLeft =
             makeupHighShelf_[0].process(
                 makeupLowShelf_[0].process(
-                    processedLeft));
+                    fullLeft));
 
-        processedRight =
+        fullRight =
             makeupHighShelf_[1].process(
                 makeupLowShelf_[1].process(
-                    processedRight));
+                    fullRight));
+
+        processedLeft =
+            baseLeft +
+            (fullLeft - baseLeft) * finish_;
+
+        processedRight =
+            baseRight +
+            (fullRight - baseRight) * finish_;
     } else {
         autoLevel_.reset();
     }
@@ -413,13 +398,8 @@ void MetalFinisherDSP::processFrame(
         roomLeft,
         roomRight);
 
-    left =
-        processedLeft +
-        roomLeft;
-
-    right =
-        processedRight +
-        roomRight;
+    left = processedLeft + roomLeft;
+    right = processedRight + roomRight;
 }
 
 } // namespace HighGainGuitarFinisher::dsp

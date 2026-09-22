@@ -201,8 +201,33 @@
           mouse-enabled="false"/>
 
     <view class="CTextLabel"
-          origin="223,369"
-          size="216,14"
+          origin="281,365"
+          size="100,14"
+          title="MODE"
+          transparent="true"
+          font-color="Muted"
+          font="MinorFont"
+          text-alignment="center"
+          mouse-enabled="false"/>
+
+    <view class="CSegmentButton"
+          origin="256,381"
+          size="150,28"
+          control-tag="106"
+          style="horizontal"
+          segment-names="1,2,3"
+          font="SwitchFont"
+          text-color="Muted"
+          text-color-highlighted="Text"
+          gradient="SwitchNormal"
+          gradient-highlighted="SwitchSelected"
+          frame-color="SwitchFrame"
+          frame-width="1"
+          round-radius="14"/>
+
+    <view class="CTextLabel"
+          origin="223,411"
+          size="216,12"
           title="ADAPTIVE TIGHTNESS • BODY • HARSHNESS"
           transparent="true"
           font-color="Minor"

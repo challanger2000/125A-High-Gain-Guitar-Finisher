@@ -464,6 +464,11 @@ int main() {
         20.0 * std::log10(
             edgeProtection.airRatio);
 
+    std::cerr
+        << "Protected sub/air delta dB: "
+        << subDeltaDb << " / "
+        << airDeltaDb << "\n";
+
     HGGF_REQUIRE(
         std::abs(subDeltaDb) < 0.35);
 

@@ -1,2 +1,2 @@
-Optimizer rework verification build 10
-Reason: verify Mode 2 bite profile and ratio-based mode separation tests.
+Optimizer rework verification build 11
+Reason: verify protected sub/air level matching, phrase-start bootstrap and three-mode profiles.

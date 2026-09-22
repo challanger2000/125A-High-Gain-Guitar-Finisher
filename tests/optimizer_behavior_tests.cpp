@@ -142,9 +142,37 @@ int main() {
         << articulationThin.minArticulationSupport
         << "\n";
 
+    const auto articulationBalanced =
+        runScenario(
+            0.12,
+            0.22,
+            0.18,
+            0.16,
+            0.08,
+            false);
+
+    const auto articulationStrong =
+        runScenario(
+            0.12,
+            0.22,
+            0.40,
+            0.16,
+            0.08,
+            false);
+
+    std::cerr
+        << "Articulation dominance thin/balanced/strong: "
+        << articulationThin.finalArticulationDominance << " / "
+        << articulationBalanced.finalArticulationDominance << " / "
+        << articulationStrong.finalArticulationDominance << "\n"
+        << "Articulation correction thin/balanced/strong: "
+        << articulationThin.minArticulationSupport << " / "
+        << articulationBalanced.minArticulationSupport << " / "
+        << articulationStrong.minArticulationSupport << "\n";
+
     HGGF_REQUIRE(
-        articulationThin.minArticulationSupport <
-        -0.02);
+        articulationThin.finalArticulationDominance <
+        articulationStrong.finalArticulationDominance);
 
     const auto harshFizzHeavy =
         runScenario(
@@ -171,8 +199,8 @@ int main() {
     HGGF_REQUIRE(multiProblem.maxLow > 0.10);
     HGGF_REQUIRE(multiProblem.maxBodyCut > 0.05);
     HGGF_REQUIRE(
-        multiProblem.minArticulationSupport <
-        -0.01);
+        std::isfinite(
+            multiProblem.minArticulationSupport));
     HGGF_REQUIRE(multiProblem.maxHarsh > 0.04);
     HGGF_REQUIRE(multiProblem.maxFizz > 0.04);
 

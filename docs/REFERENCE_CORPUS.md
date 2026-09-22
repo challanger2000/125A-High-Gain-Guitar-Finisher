@@ -447,3 +447,20 @@ Do not recalibrate the adaptive-controller thresholds merely because their inter
 The complete current Mode/Auto-Level architecture keeps the real reference outputs within controlled, musically plausible changes and preserves peak/crest behaviour well.
 
 Any future controller-threshold change must improve the complete full-path measurements, not just make internal telemetry look smaller.
+
+
+### Real-programme mode separation
+
+Using the full-path broad-band output vectors from 80 Hz to 10 kHz, the Euclidean spectral distance between modes is stable across both reference families:
+
+Bannockburn:
+- Mode 1 vs Mode 2 median distance: about 1.73 dB
+- Mode 2 vs Mode 3: about 3.27 dB
+- Mode 1 vs Mode 3: about 2.61 dB
+
+Renesans:
+- Mode 1 vs Mode 2 median distance: about 1.71 dB
+- Mode 2 vs Mode 3: about 4.08 dB
+- Mode 1 vs Mode 3: about 2.75 dB
+
+This supports retaining the current mode weights. Modes 1 and 2 remain related production characters rather than unrelated presets, while Mode 3 is deliberately more separated and smoother.

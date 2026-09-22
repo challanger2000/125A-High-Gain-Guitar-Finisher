@@ -158,3 +158,35 @@ Renesans is now the first real-programme reference family for:
 - DI-to-amp sanity observations.
 
 It must not become the only target family. More metal/industrial DI/amp references should be added before production thresholds are tightened around real-programme statistics.
+
+
+### Renesans representative one-second windows
+
+The following windows were selected from sufficiently active amp material (roughly above -32 dBFS) as targeted regression candidates. They are descriptive stress cases, not claims that the musical sections are defective.
+
+- Typical corridor example: Less Than Nothing, 152-153 s
+  - RMS -26.79 dBFS
+  - crest 13.12 dB
+- Strong 80-200 Hz dominance: Labor Of Hate, 224-225 s
+  - RMS -17.76 dBFS
+  - crest 9.70 dB
+- Strong 200-640 Hz body: Less Than Nothing, 160-161 s
+  - RMS -28.55 dBFS
+  - crest 15.47 dB
+- Strong 640-2500 Hz mid content: Less Than Nothing, 174-175 s
+  - RMS -31.15 dBFS
+  - crest 9.98 dB
+- Strong 2500-5000 Hz upper-mid content: Labor Of Hate, 129-130 s
+  - RMS -30.82 dBFS
+  - crest 15.99 dB
+- Strong 5000-10000 Hz content: Labor Of Hate, 214-215 s
+  - RMS -28.80 dBFS
+  - crest 16.56 dB
+- High-crest active example: Split Brow, 155-156 s
+  - RMS -26.92 dBFS
+  - crest 17.93 dB
+- Dense / low-crest active example: Split Brow, 228-229 s
+  - RMS -29.64 dBFS
+  - crest 9.41 dB
+
+These timestamps can be used for short, repeatable render comparisons before longer full-song validation.

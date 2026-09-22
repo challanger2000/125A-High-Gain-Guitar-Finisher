@@ -74,12 +74,98 @@ void verifyExactTransparency() {
     }
 }
 
+void verifyLinearFinishAmount() {
+    for (const double mode :
+         {0.0, 0.5, 1.0}) {
+
+        MetalFinisherDSP dry;
+        MetalFinisherDSP half;
+        MetalFinisherDSP full;
+
+        dry.prepare(sampleRate);
+        half.prepare(sampleRate);
+        full.prepare(sampleRate);
+
+        dry.setMode(mode);
+        half.setMode(mode);
+        full.setMode(mode);
+
+        dry.setFinish(0.0);
+        half.setFinish(0.5);
+        full.setFinish(1.0);
+
+        for (int i = 0;
+             i < static_cast<int>(sampleRate * 3.0);
+             ++i) {
+
+            const double time =
+                static_cast<double>(i) /
+                sampleRate;
+
+            const double pulse =
+                std::fmod(time, 0.25) < 0.065
+                    ? 1.0
+                    : 0.18;
+
+            const double inputLeft =
+                pulse * 0.55 *
+                    std::sin(2.0 * pi * 125.0 * time) +
+                0.38 *
+                    std::sin(2.0 * pi * 350.0 * time) +
+                0.06 *
+                    std::sin(2.0 * pi * 1650.0 * time) +
+                0.42 *
+                    std::sin(2.0 * pi * 3900.0 * time) +
+                0.32 *
+                    std::sin(2.0 * pi * 7800.0 * time);
+
+            const double inputRight =
+                0.97 * inputLeft +
+                0.02 *
+                    std::sin(2.0 * pi * 5400.0 * time);
+
+            double dryLeft = inputLeft;
+            double dryRight = inputRight;
+            double halfLeft = inputLeft;
+            double halfRight = inputRight;
+            double fullLeft = inputLeft;
+            double fullRight = inputRight;
+
+            dry.processFrame(dryLeft, dryRight);
+            half.processFrame(halfLeft, halfRight);
+            full.processFrame(fullLeft, fullRight);
+
+            HGGF_REQUIRE(dryLeft == inputLeft);
+            HGGF_REQUIRE(dryRight == inputRight);
+
+            const double expectedHalfLeft =
+                dryLeft +
+                0.5 * (fullLeft - dryLeft);
+
+            const double expectedHalfRight =
+                dryRight +
+                0.5 * (fullRight - dryRight);
+
+            HGGF_REQUIRE(
+                std::abs(
+                    halfLeft -
+                    expectedHalfLeft) <
+                1.0e-12);
+
+            HGGF_REQUIRE(
+                std::abs(
+                    halfRight -
+                    expectedHalfRight) <
+                1.0e-12);
+        }
+    }
+}
+
 void verifyFinishReenableStartsClean() {
     MetalFinisherDSP reused;
     reused.prepare(sampleRate);
     reused.setFinish(1.0);
 
-    // Build substantial adaptive/filter history first.
     for (int i = 0; i < 24000; ++i) {
         const double t =
             static_cast<double>(i) / sampleRate;
@@ -167,6 +253,7 @@ void verifyFiniteAcrossSampleRates() {
 
 int main() {
     verifyExactTransparency();
+    verifyLinearFinishAmount();
     verifyFinishReenableStartsClean();
     verifyFiniteAcrossSampleRates();
 
@@ -195,6 +282,7 @@ int main() {
 
     std::cout
         << "DSP smoke test passed\n"
+        << "FINISH 0/50/100 linear amount law passed for all modes\n"
         << "Low Cut gain at cutoff 45/80/120 Hz: "
         << cutoff45 << " / "
         << cutoff80 << " / "

@@ -147,6 +147,24 @@ int main() {
     HGGF_REQUIRE(harshFizzHeavy.maxHarsh > 0.05);
     HGGF_REQUIRE(harshFizzHeavy.maxFizz > 0.05);
 
+    const auto multiProblem =
+        runScenario(
+            0.70,
+            0.45,
+            0.03,
+            0.50,
+            0.42,
+            true);
+
+    // Multiple independent issues must remain active at the same time.
+    HGGF_REQUIRE(multiProblem.maxLow > 0.10);
+    HGGF_REQUIRE(multiProblem.maxBodyCut > 0.05);
+    HGGF_REQUIRE(
+        multiProblem.minArticulationSupport <
+        -0.01);
+    HGGF_REQUIRE(multiProblem.maxHarsh > 0.04);
+    HGGF_REQUIRE(multiProblem.maxFizz > 0.04);
+
     std::cout
         << "Optimizer behavior tests passed\n"
         << "Chug reduction: "
@@ -158,7 +176,13 @@ int main() {
         << "Harsh reduction: "
         << harshFizzHeavy.maxHarsh << "\n"
         << "Fizz reduction: "
-        << harshFizzHeavy.maxFizz << "\n";
+        << harshFizzHeavy.maxFizz << "\n"
+        << "Multi-problem low/body/articulation/harsh/fizz: "
+        << multiProblem.maxLow << " / "
+        << multiProblem.maxBodyCut << " / "
+        << multiProblem.minArticulationSupport << " / "
+        << multiProblem.maxHarsh << " / "
+        << multiProblem.maxFizz << "\n";
 
     return 0;
 }

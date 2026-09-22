@@ -218,14 +218,17 @@ void MetalFinisherDSP::updateModeTargets() noexcept {
             : (modeTarget_ < 0.75 ? 1 : 2);
 
     if (mode == 0) {
+        // Open / balanced: clearly more presence and articulation than the
+        // dense profile, without reaching Mode 2's aggressive bite.
         modeWeightTargets_ = {
             1.00,
-            1.00,
-            1.00,
-            1.00,
-            1.00
+            0.90,
+            1.10,
+            0.55,
+            0.70
         };
     } else if (mode == 1) {
+        // Bite / industrial: keep the current user-preferred profile exactly.
         modeWeightTargets_ = {
             1.10,
             0.80,
@@ -234,12 +237,14 @@ void MetalFinisherDSP::updateModeTargets() noexcept {
             0.85
         };
     } else {
+        // Dense / smooth: retain extra body, but avoid the previous overly
+        // dark top-end suppression.
         modeWeightTargets_ = {
+            0.75,
             0.65,
             0.55,
-            0.30,
-            1.30,
-            1.35
+            0.95,
+            1.05
         };
     }
 }

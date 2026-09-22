@@ -1,2 +1,2 @@
-Optimizer rework verification build 19
-Reason: verify balanced-input overprocessing guard, neutral-output peak-growth guard, and all existing FINISH/mode/auto-level/ROOM regressions.
+Optimizer rework verification build 20
+Reason: verify corrected diffuse balanced-input restraint, ROOM guitar-programme stress, optimizer 44.1/48/96 kHz consistency, peak-growth guard, and all existing FINISH/mode/auto-level/ROOM regressions.

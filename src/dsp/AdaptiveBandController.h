@@ -10,7 +10,9 @@ namespace HighGainGuitarFinisher::dsp {
 enum class AdaptiveBandMode {
     LowTransient,
     BodyResonance,
-    Harshness
+    ArticulationSupport,
+    Harshness,
+    Fizz
 };
 
 class AdaptiveBandController {

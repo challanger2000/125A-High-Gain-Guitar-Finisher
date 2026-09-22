@@ -351,3 +351,26 @@ An earlier real-guitar render of the finisher showed approximately +4.87 dB more
 This close order-of-magnitude match is useful validation that the current Mode 2 versus Mode 3 brightness/fizz separation is not obviously excessive relative to real alternate cab/microphone captures.
 
 It is not used as a target curve: the same Bannockburn mic pair differs much less in 2.5-5 kHz than the finisher modes, so the modes remain broader production characters rather than mic emulations.
+
+
+### LOW CUT exact-filter stress check
+
+The current LOW CUT is a 2nd-order Butterworth high-pass (Q = 0.70710678). The exact production coefficient formula was applied offline to the eight Bannockburn guitar cab/mic tracks and the Bass Amp control track.
+
+Median whole-file RMS change for the guitar mic tracks:
+
+- 45 Hz: -0.02 dB
+- 60 Hz: -0.04 dB
+- 80 Hz: -0.12 dB
+- 100 Hz: -0.23 dB
+- 120 Hz: -0.36 dB
+
+Bass Amp RMS change:
+
+- 45 Hz: -0.41 dB
+- 60 Hz: -1.00 dB
+- 80 Hz: -2.00 dB
+- 100 Hz: -3.00 dB
+- 120 Hz: -3.95 dB
+
+This quantitatively supports retaining the full 45-120 Hz manual range. Low settings remove sub-guitar energy with negligible total-level impact on this death-metal reference, while the top of the range intentionally becomes a stronger tonal choice.

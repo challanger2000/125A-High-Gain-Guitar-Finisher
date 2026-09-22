@@ -334,6 +334,24 @@ int main() {
     const auto mode3 =
         measureModeSpectrum(1.0);
 
+    std::cerr
+        << "Mode spectra body/articulation/harsh/fizz\n"
+        << "  Mode 1: "
+        << mode1.body << " / "
+        << mode1.articulation << " / "
+        << mode1.harsh << " / "
+        << mode1.fizz << "\n"
+        << "  Mode 2: "
+        << mode2.body << " / "
+        << mode2.articulation << " / "
+        << mode2.harsh << " / "
+        << mode2.fizz << "\n"
+        << "  Mode 3: "
+        << mode3.body << " / "
+        << mode3.articulation << " / "
+        << mode3.harsh << " / "
+        << mode3.fizz << "\n";
+
     // Mode 2 is the more aggressive/forward profile: more articulation and
     // more intended upper-mid/fizz character survive than in the baseline.
     HGGF_REQUIRE(

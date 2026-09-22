@@ -1,2 +1,2 @@
-Optimizer rework verification build 13
-Reason: measure exact protected sub and air deltas before final edge-protection tuning.
+Optimizer rework verification build 14
+Reason: verify dynamic edge shelves cancel global level-match makeup below 80 Hz and above 10 kHz.

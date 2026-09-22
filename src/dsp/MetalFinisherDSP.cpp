@@ -49,23 +49,29 @@ void MetalFinisherDSP::prepare(double sampleRate) {
         {6000.0, 7500.0, 9000.0, 11000.0},
         1.0);
 
-    const auto levelHighPass =
-        makeHighPass(
+    const auto protectSub =
+        makeLowPass(
             sampleRate_,
             70.0,
             0.7071067811865476);
 
-    const auto levelLowPass =
-        makeLowPass(
+    const auto protectAir =
+        makeHighPass(
             sampleRate_,
             11000.0,
             0.7071067811865476);
 
-    for (auto& filter : levelCoreHighPass_)
-        filter.setCoefficients(levelHighPass);
+    for (auto& filter : protectSubDry_)
+        filter.setCoefficients(protectSub);
 
-    for (auto& filter : levelCoreLowPass_)
-        filter.setCoefficients(levelLowPass);
+    for (auto& filter : protectSubWet_)
+        filter.setCoefficients(protectSub);
+
+    for (auto& filter : protectAirDry_)
+        filter.setCoefficients(protectAir);
+
+    for (auto& filter : protectAirWet_)
+        filter.setCoefficients(protectAir);
 
     autoLevel_.prepare(sampleRate_);
     room_.prepare(sampleRate_);
@@ -78,10 +84,16 @@ void MetalFinisherDSP::reset() noexcept {
     for (auto& filter : lowCut_)
         filter.reset();
 
-    for (auto& filter : levelCoreHighPass_)
+    for (auto& filter : protectSubDry_)
         filter.reset();
 
-    for (auto& filter : levelCoreLowPass_)
+    for (auto& filter : protectSubWet_)
+        filter.reset();
+
+    for (auto& filter : protectAirDry_)
+        filter.reset();
+
+    for (auto& filter : protectAirWet_)
         filter.reset();
 
     lowEnd_.reset();
@@ -137,6 +149,15 @@ void MetalFinisherDSP::setFinish(double normalized) noexcept {
         harshness_.reset();
         fizz_.reset();
         autoLevel_.reset();
+
+        for (auto& filter : protectSubDry_)
+            filter.reset();
+        for (auto& filter : protectSubWet_)
+            filter.reset();
+        for (auto& filter : protectAirDry_)
+            filter.reset();
+        for (auto& filter : protectAirWet_)
+            filter.reset();
     }
 }
 
@@ -337,56 +358,64 @@ void MetalFinisherDSP::processFrame(
             modeWeights_[3] * (harshRight - baseRight) +
             modeWeights_[4] * (fizzRight - baseRight);
 
-        const double correctionDeltaLeft =
-            correctionLeft * finish_;
-
-        const double correctionDeltaRight =
-            correctionRight * finish_;
-
-        const double coreBaseLeft =
-            levelCoreLowPass_[0].process(
-                levelCoreHighPass_[0].process(
-                    baseLeft));
-
-        const double coreBaseRight =
-            levelCoreLowPass_[1].process(
-                levelCoreHighPass_[1].process(
-                    baseRight));
-
-        // Learn and apply loudness compensation only inside the useful
-        // high-gain guitar band. Sub-bass and extreme air remain dry residuals
-        // instead of being raised merely because the optimizer cut energy in
-        // the mids or fizz region.
-        double measuredCoreLeft =
-            coreBaseLeft +
-            correctionDeltaLeft;
-
-        double measuredCoreRight =
-            coreBaseRight +
-            correctionDeltaRight;
-
-        autoLevel_.processFrame(
-            coreBaseLeft,
-            coreBaseRight,
-            measuredCoreLeft,
-            measuredCoreRight);
-
-        const double levelGain =
-            autoLevel_.currentGain();
-
         processedLeft =
             baseLeft +
-            (levelGain - 1.0) *
-                coreBaseLeft +
-            levelGain *
-                correctionDeltaLeft;
+            correctionLeft * finish_;
 
         processedRight =
             baseRight +
-            (levelGain - 1.0) *
-                coreBaseRight +
-            levelGain *
-                correctionDeltaRight;
+            correctionRight * finish_;
+
+        autoLevel_.processFrame(
+            baseLeft,
+            baseRight,
+            processedLeft,
+            processedRight);
+
+        // The global level match is intentionally full-band for a fair A/B.
+        // Afterwards restore only the protected edge bands from the dry base.
+        // Matched dry/wet filters have identical phase, so their difference
+        // corrects the band without reconstructing the whole signal through
+        // a phase-shifted crossover path.
+        const double drySubLeft =
+            protectSubDry_[0].process(
+                baseLeft);
+
+        const double drySubRight =
+            protectSubDry_[1].process(
+                baseRight);
+
+        const double wetSubLeft =
+            protectSubWet_[0].process(
+                processedLeft);
+
+        const double wetSubRight =
+            protectSubWet_[1].process(
+                processedRight);
+
+        const double dryAirLeft =
+            protectAirDry_[0].process(
+                baseLeft);
+
+        const double dryAirRight =
+            protectAirDry_[1].process(
+                baseRight);
+
+        const double wetAirLeft =
+            protectAirWet_[0].process(
+                processedLeft);
+
+        const double wetAirRight =
+            protectAirWet_[1].process(
+                processedRight);
+
+        processedLeft +=
+            (drySubLeft - wetSubLeft) +
+            (dryAirLeft - wetAirLeft);
+
+        processedRight +=
+            (drySubRight - wetSubRight) +
+            (dryAirRight - wetAirRight);
     } else {
         autoLevel_.reset();
     }

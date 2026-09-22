@@ -352,32 +352,45 @@ int main() {
         << mode3.harsh << " / "
         << mode3.fizz << "\n";
 
-    // Mode 2 is the more aggressive/forward profile: more articulation and
-    // more intended upper-mid/fizz character survive than in the baseline.
-    HGGF_REQUIRE(
-        mode2.articulation >
-        mode1.articulation * 1.02);
-    HGGF_REQUIRE(
-        mode2.harsh >
-        mode1.harsh * 1.01);
-    HGGF_REQUIRE(
-        mode2.fizz >
-        mode1.fizz * 1.01);
+    const double mode1HarshToBody =
+        mode1.harsh / mode1.body;
 
-    // Mode 3 is the denser/darker profile: more body survives, while the
-    // support boost and top-end energy are reduced relative to Mode 1.
+    const double mode2HarshToBody =
+        mode2.harsh / mode2.body;
+
+    const double mode1FizzToHarsh =
+        mode1.fizz / mode1.harsh;
+
+    const double mode2FizzToHarsh =
+        mode2.fizz / mode2.harsh;
+
+    // Mode 2 is the bite profile: clearly more upper-mid attack relative to
+    // body, but not a simple broadband brightness/fizz boost.
+    HGGF_REQUIRE(
+        mode2HarshToBody >
+        mode1HarshToBody * 1.05);
+
+    HGGF_REQUIRE(
+        mode2FizzToHarsh <
+        mode1FizzToHarsh * 0.98);
+
+    // Mode 3 is the denser/darker profile: more body survives, while
+    // articulation support and upper energy are reduced relative to Mode 1.
     HGGF_REQUIRE(
         mode3.body >
-        mode1.body * 1.01);
+        mode1.body * 1.10);
+
     HGGF_REQUIRE(
-        mode3.articulation <
-        mode1.articulation * 0.99);
+        (mode3.articulation / mode3.body) <
+        (mode1.articulation / mode1.body) * 0.85);
+
     HGGF_REQUIRE(
-        mode3.harsh <
-        mode1.harsh * 0.99);
+        (mode3.harsh / mode3.body) <
+        (mode1.harsh / mode1.body) * 0.85);
+
     HGGF_REQUIRE(
-        mode3.fizz <
-        mode1.fizz * 0.99);
+        (mode3.fizz / mode3.body) <
+        (mode1.fizz / mode1.body) * 0.85);
 
     std::cout
         << "Optimizer behavior tests passed\n"

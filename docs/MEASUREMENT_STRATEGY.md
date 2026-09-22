@@ -28,13 +28,14 @@ ROOM has a dedicated wet-only test.
 
 The locally verified design currently measures approximately:
 
-- first reflection: 11.29 ms at 48 kHz,
-- wet stereo correlation: 0.33,
-- mono/stereo wet-energy ratio: -1.76 dB,
-- wet low-band energy versus mid-band energy: -6.13 dB,
-- wet high-band energy versus mid-band energy: -7.72 dB.
+- first reflection: 15.71 ms at 48 kHz,
+- maximum wet/dry level: -6.13 dB,
+- wet stereo correlation: 0.18,
+- mono/stereo wet-energy ratio: -2.29 dB,
+- wet low-band energy versus mid-band energy: -10.04 dB,
+- wet high-band energy versus mid-band energy: -8.64 dB.
 
-The impulse envelope falls strongly after the early field. Energy in the 450-700 ms window is more than 20 dB below the 120-300 ms window, and the 900-1200 ms region is roughly 50 dB below it.
+The verified 48 kHz impulse RMS windows are approximately -52.77 dB early, -59.56 dB mid, -66.87 dB late, -75.28 dB very-late, -89.53 dB long-tail and -113.38 dB final-tail.
 
 This is deliberately a short room rather than a conventional long reverb.
 
@@ -55,7 +56,7 @@ Wet-only tone measurements enforce:
 - low-frequency attenuation relative to the midrange,
 - high-frequency attenuation relative to the midrange.
 
-These checks guard the 180 Hz wet high-pass and dark upper-frequency damping without forcing one exact comb-filter response.
+These checks guard the 200 Hz wet high-pass and dark upper-frequency damping without forcing one exact comb-filter response.
 
 ## ROOM stereo and mono checks
 

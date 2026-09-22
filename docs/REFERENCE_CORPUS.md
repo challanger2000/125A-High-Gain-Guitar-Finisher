@@ -218,3 +218,18 @@ Role medians:
 - GTR Pre Rec R: RMS -33.44 dBFS, crest 11.54 dB
 
 The pre-recorded guitar pair is significantly more mid-forward and has much less 20-80 Hz energy than the live amp captures. It is therefore useful as a second tonal family inside the same session, but must not be treated as equivalent to the DI/Amp pair.
+
+
+## Next-priority external reference
+
+### Cnoc An Tursa — Bannockburn
+
+Cambridge MT classifies the project as Death Metal.
+
+The project notes state that all six guitar parts were recorded through dual-miked cabinets and also captured as DI feeds at the same time. This makes the session especially valuable for comparing multiple real high-gain amp/cab captures against their corresponding DI performances.
+
+Cambridge lists:
+- Edited Excerpt: 35 tracks, approximately 107 MB
+- Full Multitrack: 43 tracks, approximately 999 MB
+
+Priority: high. Prefer the edited excerpt first if it preserves the guitar DI/cab pairs; use the full multitrack only if required.

@@ -103,6 +103,82 @@ inline BiquadCoefficients makeBandPass(double sampleRate,
     };
 }
 
+inline BiquadCoefficients makeLowShelf(double sampleRate,
+                                       double frequency,
+                                       double gainDb) noexcept {
+    constexpr double pi = 3.141592653589793238462643383279502884;
+    const double fs = std::max(sampleRate, 1000.0);
+    const double f = std::clamp(frequency, 10.0, fs * 0.45);
+    const double A = std::pow(10.0, gainDb / 40.0);
+    const double w0 = 2.0 * pi * f / fs;
+    const double cosW0 = std::cos(w0);
+    const double sinW0 = std::sin(w0);
+    const double alpha =
+        0.5 * sinW0 *
+        std::sqrt(2.0);
+    const double beta =
+        2.0 * std::sqrt(A) * alpha;
+
+    const double a0 =
+        (A + 1.0) +
+        (A - 1.0) * cosW0 +
+        beta;
+
+    return {
+        A * ((A + 1.0) -
+             (A - 1.0) * cosW0 +
+             beta) / a0,
+        2.0 * A * ((A - 1.0) -
+                   (A + 1.0) * cosW0) / a0,
+        A * ((A + 1.0) -
+             (A - 1.0) * cosW0 -
+             beta) / a0,
+        -2.0 * ((A - 1.0) +
+                (A + 1.0) * cosW0) / a0,
+        ((A + 1.0) +
+         (A - 1.0) * cosW0 -
+         beta) / a0
+    };
+}
+
+inline BiquadCoefficients makeHighShelf(double sampleRate,
+                                        double frequency,
+                                        double gainDb) noexcept {
+    constexpr double pi = 3.141592653589793238462643383279502884;
+    const double fs = std::max(sampleRate, 1000.0);
+    const double f = std::clamp(frequency, 10.0, fs * 0.45);
+    const double A = std::pow(10.0, gainDb / 40.0);
+    const double w0 = 2.0 * pi * f / fs;
+    const double cosW0 = std::cos(w0);
+    const double sinW0 = std::sin(w0);
+    const double alpha =
+        0.5 * sinW0 *
+        std::sqrt(2.0);
+    const double beta =
+        2.0 * std::sqrt(A) * alpha;
+
+    const double a0 =
+        (A + 1.0) -
+        (A - 1.0) * cosW0 +
+        beta;
+
+    return {
+        A * ((A + 1.0) +
+             (A - 1.0) * cosW0 +
+             beta) / a0,
+        -2.0 * A * ((A - 1.0) +
+                    (A + 1.0) * cosW0) / a0,
+        A * ((A + 1.0) +
+             (A - 1.0) * cosW0 -
+             beta) / a0,
+        2.0 * ((A - 1.0) -
+               (A + 1.0) * cosW0) / a0,
+        ((A + 1.0) -
+         (A - 1.0) * cosW0 -
+         beta) / a0
+    };
+}
+
 inline BiquadCoefficients makePeaking(double sampleRate,
                                       double frequency,
                                       double q,

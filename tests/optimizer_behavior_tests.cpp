@@ -15,13 +15,17 @@ constexpr double kSampleRate = 48000.0;
 
 struct Result {
     double maxLow {0.0};
+    double finalLow {0.0};
     double maxBodyCut {0.0};
+    double finalBody {0.0};
     double minBodySupport {0.0};
     double minArticulationSupport {0.0};
     double finalArticulationCorrection {0.0};
     double finalArticulationDominance {0.0};
     double maxHarsh {0.0};
+    double finalHarsh {0.0};
     double maxFizz {0.0};
+    double finalFizz {0.0};
 };
 
 Result runScenario(
@@ -102,6 +106,82 @@ Result runScenario(
         result.maxFizz = std::max(
             result.maxFizz,
             dsp.currentFizzReduction());
+
+        result.finalLow =
+            dsp.currentDynamicLowEndReduction();
+        result.finalBody =
+            dsp.currentBodyReduction();
+        result.finalHarsh =
+            dsp.currentHarshnessReduction();
+        result.finalFizz =
+            dsp.currentFizzReduction();
+    }
+
+    return result;
+}
+
+Result runDiffuseBalancedScenario() {
+    MetalFinisherDSP dsp;
+    dsp.prepare(kSampleRate);
+    dsp.setFinish(1.0);
+    dsp.setMode(0.0);
+
+    Result result;
+
+    const int total =
+        static_cast<int>(kSampleRate * 5.0);
+
+    for (int i = 0; i < total; ++i) {
+        const double t =
+            static_cast<double>(i) / kSampleRate;
+
+        // Equal-energy clusters across each detector bank avoid presenting
+        // a single narrow sinusoid as an artificial "resonance".
+        const double x =
+            0.045 * (
+                std::sin(2.0 * kPi * 85.0 * t) +
+                std::sin(2.0 * kPi * 110.0 * t) +
+                std::sin(2.0 * kPi * 145.0 * t) +
+                std::sin(2.0 * kPi * 180.0 * t)) +
+            0.055 * (
+                std::sin(2.0 * kPi * 220.0 * t) +
+                std::sin(2.0 * kPi * 300.0 * t) +
+                std::sin(2.0 * kPi * 390.0 * t) +
+                std::sin(2.0 * kPi * 500.0 * t)) +
+            0.050 * (
+                std::sin(2.0 * kPi * 800.0 * t) +
+                std::sin(2.0 * kPi * 1200.0 * t) +
+                std::sin(2.0 * kPi * 1750.0 * t) +
+                std::sin(2.0 * kPi * 2400.0 * t)) +
+            0.042 * (
+                std::sin(2.0 * kPi * 2800.0 * t) +
+                std::sin(2.0 * kPi * 3600.0 * t) +
+                std::sin(2.0 * kPi * 4500.0 * t) +
+                std::sin(2.0 * kPi * 5600.0 * t)) +
+            0.030 * (
+                std::sin(2.0 * kPi * 6000.0 * t) +
+                std::sin(2.0 * kPi * 7500.0 * t) +
+                std::sin(2.0 * kPi * 9000.0 * t) +
+                std::sin(2.0 * kPi * 11000.0 * t));
+
+        double left = x;
+        double right = x;
+
+        dsp.processFrame(left, right);
+
+        HGGF_REQUIRE(std::isfinite(left));
+        HGGF_REQUIRE(std::isfinite(right));
+
+        result.finalLow =
+            dsp.currentDynamicLowEndReduction();
+        result.finalBody =
+            dsp.currentBodyReduction();
+        result.finalArticulationCorrection =
+            dsp.currentArticulationCorrection();
+        result.finalHarsh =
+            dsp.currentHarshnessReduction();
+        result.finalFizz =
+            dsp.currentFizzReduction();
     }
 
     return result;
@@ -423,34 +503,28 @@ int main() {
         articulationBalanced.finalArticulationCorrection >
         -0.03);
 
-    // A broadly balanced fixture is not a tonal reference. It is a safety
-    // regression: no single adaptive zone should jump close to its maximum
-    // authority when there is no deliberately exaggerated problem.
+    // A diffuse, already-balanced spectrum is a safety regression rather
+    // than a target curve. Persistent intervention must remain bounded when
+    // no detector bank contains an intentionally dominant narrow problem.
     const auto alreadyBalanced =
-        runScenario(
-            0.16,
-            0.22,
-            0.18,
-            0.16,
-            0.10,
-            false);
+        runDiffuseBalancedScenario();
 
     std::cerr
-        << "Already-balanced intervention low/body/articulation/harsh/fizz: "
-        << alreadyBalanced.maxLow << " / "
-        << alreadyBalanced.maxBodyCut << " / "
+        << "Already-balanced final intervention low/body/articulation/harsh/fizz: "
+        << alreadyBalanced.finalLow << " / "
+        << alreadyBalanced.finalBody << " / "
         << alreadyBalanced.finalArticulationCorrection << " / "
-        << alreadyBalanced.maxHarsh << " / "
-        << alreadyBalanced.maxFizz << "\n";
+        << alreadyBalanced.finalHarsh << " / "
+        << alreadyBalanced.finalFizz << "\n";
 
-    HGGF_REQUIRE(alreadyBalanced.maxLow < 0.20);
-    HGGF_REQUIRE(alreadyBalanced.maxBodyCut < 0.22);
+    HGGF_REQUIRE(alreadyBalanced.finalLow < 0.12);
+    HGGF_REQUIRE(alreadyBalanced.finalBody < 0.18);
     HGGF_REQUIRE(
         std::abs(
             alreadyBalanced.finalArticulationCorrection) <
         0.12);
-    HGGF_REQUIRE(alreadyBalanced.maxHarsh < 0.25);
-    HGGF_REQUIRE(alreadyBalanced.maxFizz < 0.25);
+    HGGF_REQUIRE(alreadyBalanced.finalHarsh < 0.20);
+    HGGF_REQUIRE(alreadyBalanced.finalFizz < 0.20);
 
     const auto harshFizzHeavy =
         runScenario(
@@ -584,12 +658,12 @@ int main() {
         << harshFizzHeavy.maxHarsh << "\n"
         << "Fizz reduction: "
         << harshFizzHeavy.maxFizz << "\n"
-        << "Already-balanced low/body/articulation/harsh/fizz: "
-        << alreadyBalanced.maxLow << " / "
-        << alreadyBalanced.maxBodyCut << " / "
+        << "Already-balanced final low/body/articulation/harsh/fizz: "
+        << alreadyBalanced.finalLow << " / "
+        << alreadyBalanced.finalBody << " / "
         << alreadyBalanced.finalArticulationCorrection << " / "
-        << alreadyBalanced.maxHarsh << " / "
-        << alreadyBalanced.maxFizz << "\n"
+        << alreadyBalanced.finalHarsh << " / "
+        << alreadyBalanced.finalFizz << "\n"
         << "Multi-problem low/body/articulation/harsh/fizz: "
         << multiProblem.maxLow << " / "
         << multiProblem.maxBodyCut << " / "

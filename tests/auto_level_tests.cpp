@@ -153,6 +153,92 @@ void verifyFastPhraseBootstrap() {
     }
 }
 
+void verifyProgrammeChangeDoesNotPump() {
+    constexpr double sampleRate = 48000.0;
+
+    AutoLevelCompensator level;
+    level.prepare(sampleRate);
+
+    double minGainDb = 1000.0;
+    double maxGainDb = -1000.0;
+    double maxStepDb = 0.0;
+    double previousGainDb = 0.0;
+
+    const int total =
+        static_cast<int>(sampleRate * 6.0);
+
+    for (int i = 0; i < total; ++i) {
+        const double time =
+            static_cast<double>(i) / sampleRate;
+
+        // Alternate every 125 ms between a palm-mute-like denser section and
+        // a more open sustain-like section. The processed level deliberately
+        // changes in opposite directions so a fast level matcher would pump.
+        const int section =
+            static_cast<int>(time / 0.125);
+
+        const double processedScale =
+            (section & 1) == 0
+                ? 0.78
+                : 1.22;
+
+        const double envelope =
+            (section & 1) == 0
+                ? 1.00
+                : 0.72;
+
+        const double reference =
+            envelope * (
+                0.28 * std::sin(2.0 * pi * 115.0 * time) +
+                0.22 * std::sin(2.0 * pi * 950.0 * time) +
+                0.14 * std::sin(2.0 * pi * 3900.0 * time));
+
+        double left =
+            reference * processedScale;
+        double right = left;
+
+        level.processFrame(
+            reference,
+            reference,
+            left,
+            right);
+
+        const double gainDb =
+            level.currentGainDb();
+
+        HGGF_REQUIRE(std::isfinite(gainDb));
+
+        if (i > static_cast<int>(sampleRate * 1.0)) {
+            minGainDb =
+                std::min(minGainDb, gainDb);
+
+            maxGainDb =
+                std::max(maxGainDb, gainDb);
+
+            maxStepDb =
+                std::max(
+                    maxStepDb,
+                    std::abs(
+                        gainDb -
+                        previousGainDb));
+        }
+
+        previousGainDb = gainDb;
+    }
+
+    const double excursionDb =
+        maxGainDb - minGainDb;
+
+    std::cerr
+        << "Programme-change auto-level excursion / max sample step dB: "
+        << excursionDb << " / "
+        << maxStepDb << "\n";
+
+    // The matcher must not chase 125 ms phrase changes like a compressor.
+    HGGF_REQUIRE(excursionDb < 0.75);
+    HGGF_REQUIRE(maxStepDb < 0.01);
+}
+
 void verifyFinishZeroAfterMakeup() {
     constexpr double sampleRate = 48000.0;
 
@@ -271,6 +357,7 @@ int main() {
     }
 
     verifyFastPhraseBootstrap();
+    verifyProgrammeChangeDoesNotPump();
     verifyFinishZeroAfterMakeup();
     verifySilenceReturn();
 

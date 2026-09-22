@@ -18,10 +18,11 @@ enum ParamID : Steinberg::Vst::ParamID {
     kBypass,
     kLowCut80,
     kRoomDecay,
-    kMode
+    kMode,
+    kMass
 };
 
-constexpr Steinberg::int32 kStateVersion = 5;
+constexpr Steinberg::int32 kStateVersion = 6;
 constexpr Steinberg::int32 kFirstSupportedStateVersion = 1;
 
 } // namespace HighGainGuitarFinisher

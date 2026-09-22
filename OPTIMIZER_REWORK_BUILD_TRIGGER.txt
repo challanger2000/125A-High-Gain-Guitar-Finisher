@@ -1,2 +1,2 @@
-Optimizer rework verification build 11
-Reason: verify protected sub/air level matching, phrase-start bootstrap and three-mode profiles.
+Optimizer rework verification build 12
+Reason: verify matched dry/wet sub-air protection, phrase bootstrap and mode profiles.

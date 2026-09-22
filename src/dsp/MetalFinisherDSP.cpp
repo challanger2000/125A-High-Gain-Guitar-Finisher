@@ -28,10 +28,22 @@ void MetalFinisherDSP::prepare(double sampleRate) {
         {220.0, 300.0, 390.0, 500.0},
         0.9);
 
+    articulation_.prepare(
+        sampleRate_,
+        AdaptiveBandMode::ArticulationSupport,
+        {800.0, 1200.0, 1750.0, 2400.0},
+        0.85);
+
     harshness_.prepare(
         sampleRate_,
         AdaptiveBandMode::Harshness,
-        {3200.0, 4200.0, 5400.0, 6800.0},
+        {2800.0, 3600.0, 4500.0, 5600.0},
+        1.15);
+
+    fizz_.prepare(
+        sampleRate_,
+        AdaptiveBandMode::Fizz,
+        {6000.0, 7500.0, 9000.0, 11000.0},
         1.0);
 
     autoLevel_.prepare(sampleRate_);
@@ -46,7 +58,9 @@ void MetalFinisherDSP::reset() noexcept {
 
     lowEnd_.reset();
     body_.reset();
+    articulation_.reset();
     harshness_.reset();
+    fizz_.reset();
     autoLevel_.reset();
     room_.reset();
 
@@ -88,7 +102,9 @@ void MetalFinisherDSP::setFinish(double normalized) noexcept {
 
         lowEnd_.reset();
         body_.reset();
+        articulation_.reset();
         harshness_.reset();
+        fizz_.reset();
         autoLevel_.reset();
     }
 }
@@ -195,7 +211,15 @@ void MetalFinisherDSP::processFrame(
             finishLeft,
             finishRight);
 
+        articulation_.processFrame(
+            finishLeft,
+            finishRight);
+
         harshness_.processFrame(
+            finishLeft,
+            finishRight);
+
+        fizz_.processFrame(
             finishLeft,
             finishRight);
 

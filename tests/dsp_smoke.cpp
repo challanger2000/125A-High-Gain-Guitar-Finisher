@@ -352,6 +352,7 @@ void verifyFiniteAcrossSampleRates() {
         MetalFinisherDSP dsp;
         dsp.prepare(rate);
         dsp.setFinish(1.0);
+        dsp.setMass(1.0);
 
         for (int i = 0;
              i < static_cast<int>(rate * 0.25);

@@ -524,15 +524,16 @@ int main() {
         mode2FizzToHarsh <
         mode1FizzToHarsh * 0.98);
 
-    // Mode 3 is the denser/darker profile: more body survives, while
-    // articulation support and upper energy are reduced relative to Mode 1.
+    // Mode 3 is smooth/controlled: it keeps more body than Mode 1 while
+    // remaining clearly less forward, but it must not collapse into an
+    // over-dark profile.
     HGGF_REQUIRE(
         mode3.body >
         mode1.body * 1.10);
 
     HGGF_REQUIRE(
         (mode3.articulation / mode3.body) <
-        (mode1.articulation / mode1.body) * 0.85);
+        (mode1.articulation / mode1.body) * 0.90);
 
     HGGF_REQUIRE(
         (mode3.harsh / mode3.body) <

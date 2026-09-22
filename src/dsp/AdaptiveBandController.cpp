@@ -57,11 +57,17 @@ void AdaptiveBandController::prepare(
     double reductionReleaseMs = 500.0;
 
     if (mode_ == AdaptiveBandMode::LowTransient) {
-        reductionAttackMs = 5.0;
-        reductionReleaseMs = 140.0;
+        reductionAttackMs = 4.0;
+        reductionReleaseMs = 150.0;
+    } else if (mode_ == AdaptiveBandMode::ArticulationSupport) {
+        reductionAttackMs = 35.0;
+        reductionReleaseMs = 260.0;
     } else if (mode_ == AdaptiveBandMode::Harshness) {
-        reductionAttackMs = 8.0;
-        reductionReleaseMs = 160.0;
+        reductionAttackMs = 6.0;
+        reductionReleaseMs = 180.0;
+    } else if (mode_ == AdaptiveBandMode::Fizz) {
+        reductionAttackMs = 10.0;
+        reductionReleaseMs = 220.0;
     }
 
     reductionAttack_ =
@@ -214,48 +220,80 @@ void AdaptiveBandController::processFrame(
 
     double targetReduction = 0.0;
 
+    const double dominance = std::sqrt(
+        selectedSlow /
+        (wideSlowEnergy_ + kEpsilon));
+
     if (mode_ == AdaptiveBandMode::BodyResonance) {
-        const double activity = std::clamp(
-            (peakiness - 1.15) / 1.20,
+        const double excess = std::clamp(
+            (peakiness - 1.12) / 1.00,
             0.0,
             1.0);
 
-        targetReduction = 0.18 * activity;
+        const double deficit = std::clamp(
+            (0.105 - dominance) / 0.060,
+            0.0,
+            1.0);
+
+        targetReduction =
+            excess > 0.08
+                ? 0.40 * excess
+                : -0.20 * deficit;
     } else if (mode_ == AdaptiveBandMode::LowTransient) {
         const double rise = std::sqrt(
             (fastEnergy_[selected_] + kEpsilon) /
             (selectedSlow + kEpsilon));
 
-        const double dominance = std::sqrt(
-            selectedSlow /
-            (wideSlowEnergy_ + kEpsilon));
-
         const double activity =
-            dominance > 0.08
+            dominance > 0.065
                 ? std::clamp(
-                    (rise - 1.12) / 0.80,
+                    (rise - 1.08) / 0.62,
                     0.0,
                     1.0)
                 : 0.0;
 
-        targetReduction = 0.30 * activity;
+        targetReduction = 0.55 * activity;
+    } else if (mode_ == AdaptiveBandMode::ArticulationSupport) {
+        const double deficit = std::clamp(
+            (0.090 - dominance) / 0.055,
+            0.0,
+            1.0);
+
+        const double excess = std::clamp(
+            (peakiness - 1.65) / 1.80,
+            0.0,
+            1.0);
+
+        targetReduction =
+            excess > 0.20
+                ? 0.22 * excess
+                : -0.28 * deficit;
     } else {
         const double rise = std::sqrt(
             (fastEnergy_[selected_] + kEpsilon) /
             (selectedSlow + kEpsilon));
 
         const double transient = std::clamp(
-            (rise - 1.10) / 0.65,
+            (rise - 1.07) /
+                (mode_ == AdaptiveBandMode::Fizz ? 0.75 : 0.55),
             0.0,
             1.0);
 
         const double persistent = std::clamp(
-            (peakiness - 1.20) / 1.60,
+            (peakiness -
+                (mode_ == AdaptiveBandMode::Fizz ? 1.12 : 1.15)) /
+                (mode_ == AdaptiveBandMode::Fizz ? 1.45 : 1.30),
             0.0,
             1.0);
 
+        const double authority =
+            mode_ == AdaptiveBandMode::Fizz
+                ? 0.40
+                : 0.45;
+
         targetReduction =
-            0.22 * std::max(transient, persistent);
+            authority *
+            std::max(transient, persistent);
     }
 
     const double reductionCoefficient =

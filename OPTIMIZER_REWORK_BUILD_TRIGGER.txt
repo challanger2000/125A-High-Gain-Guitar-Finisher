@@ -1,2 +1,2 @@
-Optimizer rework verification build 4
-Reason: measure articulation dominance and verify parallel multi-problem behavior.
+Optimizer rework verification build 5
+Reason: measure articulation detector separation for thin, balanced and strong fixtures.

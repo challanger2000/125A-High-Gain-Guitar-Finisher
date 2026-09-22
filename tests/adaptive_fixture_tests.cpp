@@ -22,10 +22,11 @@ struct SignatureResult {
 SignatureResult runSignature(
     double lowFrequency,
     double bodyFrequency,
-    double harshFrequency) {
+    double harshFrequency,
+    double fixtureSampleRate = sampleRate) {
 
     MetalFinisherDSP dsp;
-    dsp.prepare(sampleRate);
+    dsp.prepare(fixtureSampleRate);
     dsp.setFinish(1.0);
 
     SignatureResult result;
@@ -35,7 +36,7 @@ SignatureResult runSignature(
          ++i) {
 
         const double time =
-            static_cast<double>(i) / sampleRate;
+            static_cast<double>(i) / fixtureSampleRate;
 
         const double palmMuteEnvelope =
             std::fmod(time, 0.25) < 0.060
@@ -100,6 +101,75 @@ int main() {
     HGGF_REQUIRE(
         signatureA.harshFrequency <
         signatureB.harshFrequency - 1000.0);
+
+    // The same spectral signature must resolve to the same adaptive
+    // regions across the sample rates commonly used by DAWs.
+    const auto signature441 =
+        runSignature(90.0, 230.0, 3400.0, 44100.0);
+
+    const auto signature480 =
+        runSignature(90.0, 230.0, 3400.0, 48000.0);
+
+    const auto signature960 =
+        runSignature(90.0, 230.0, 3400.0, 96000.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature441.lowFrequency -
+            signature480.lowFrequency) < 15.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature960.lowFrequency -
+            signature480.lowFrequency) < 15.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature441.bodyFrequency -
+            signature480.bodyFrequency) < 40.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature960.bodyFrequency -
+            signature480.bodyFrequency) < 40.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature441.harshFrequency -
+            signature480.harshFrequency) < 250.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature960.harshFrequency -
+            signature480.harshFrequency) < 250.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature441.maxLowReduction -
+            signature480.maxLowReduction) < 0.08);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature960.maxLowReduction -
+            signature480.maxLowReduction) < 0.08);
+
+    std::cerr
+        << "Sample-rate signature low/body/harsh/reduction 44.1/48/96 kHz:\n"
+        << "  44.1: "
+        << signature441.lowFrequency << " / "
+        << signature441.bodyFrequency << " / "
+        << signature441.harshFrequency << " / "
+        << signature441.maxLowReduction << "\n"
+        << "  48: "
+        << signature480.lowFrequency << " / "
+        << signature480.bodyFrequency << " / "
+        << signature480.harshFrequency << " / "
+        << signature480.maxLowReduction << "\n"
+        << "  96: "
+        << signature960.lowFrequency << " / "
+        << signature960.bodyFrequency << " / "
+        << signature960.harshFrequency << " / "
+        << signature960.maxLowReduction << "\n";
 
     std::cout
         << "Adaptive fixture tests passed\n"

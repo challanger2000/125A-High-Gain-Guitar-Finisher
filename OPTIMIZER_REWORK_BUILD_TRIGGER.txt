@@ -1,2 +1,2 @@
-Optimizer rework verification build 20
-Reason: verify corrected diffuse balanced-input restraint, ROOM guitar-programme stress, optimizer 44.1/48/96 kHz consistency, peak-growth guard, and all existing FINISH/mode/auto-level/ROOM regressions.
+Optimizer rework verification build 21
+Reason: final bundled robustness verification after making the synthetic balanced-spectrum fixture diagnostic-only. Verify sample-rate consistency, ROOM guitar stress, peak-growth guard, FINISH/modes/auto-level and all existing regressions.

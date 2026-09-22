@@ -224,7 +224,7 @@ void MetalFinisherDSP::updateModeTargets() noexcept {
             1.00,
             0.90,
             1.10,
-            0.55,
+            0.80,
             0.70
         };
     } else if (mode == 1) {

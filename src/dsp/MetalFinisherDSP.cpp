@@ -5,6 +5,16 @@
 
 namespace HighGainGuitarFinisher::dsp {
 
+namespace {
+constexpr double kMassBoostHz = 140.0;
+constexpr double kMassBoostDb = 1.75;
+constexpr double kMassBoostQ = 1.20;
+constexpr double kMassCleanupHz = 220.0;
+constexpr double kMassCleanupDb = -1.75;
+constexpr double kMassCleanupQ = 1.00;
+constexpr double kMassTrimGain = 0.9885530946569389; // -0.10 dB
+}
+
 void MetalFinisherDSP::prepare(double sampleRate) {
     sampleRate_ = (std::isfinite(sampleRate) && sampleRate > 1000.0)
         ? sampleRate
@@ -67,6 +77,28 @@ void MetalFinisherDSP::prepare(double sampleRate) {
     for (auto& filter : makeupHighShelf_)
         filter.setCoefficients(unityHighShelf);
 
+    const auto massBoostCoefficients =
+        makePeaking(
+            sampleRate_,
+            kMassBoostHz,
+            kMassBoostQ,
+            kMassBoostDb);
+
+    const auto massCleanupCoefficients =
+        makePeaking(
+            sampleRate_,
+            kMassCleanupHz,
+            kMassCleanupQ,
+            kMassCleanupDb);
+
+    for (auto& filter : massBoost_)
+        filter.setCoefficients(
+            massBoostCoefficients);
+
+    for (auto& filter : massCleanup_)
+        filter.setCoefficients(
+            massCleanupCoefficients);
+
     autoLevel_.prepare(sampleRate_);
     room_.prepare(sampleRate_);
 
@@ -82,6 +114,12 @@ void MetalFinisherDSP::reset() noexcept {
         filter.reset();
 
     for (auto& filter : makeupHighShelf_)
+        filter.reset();
+
+    for (auto& filter : massBoost_)
+        filter.reset();
+
+    for (auto& filter : massCleanup_)
         filter.reset();
 
     makeupShelfCoefficientCountdown_ = 0;
@@ -145,6 +183,16 @@ void MetalFinisherDSP::setFinish(double normalized) noexcept {
             filter.reset();
         makeupShelfCoefficientCountdown_ = 0;
     }
+}
+
+void MetalFinisherDSP::setMass(double normalized) noexcept {
+    mass_ =
+        std::clamp(
+            std::isfinite(normalized)
+                ? normalized
+                : 0.0,
+            0.0,
+            1.0);
 }
 
 void MetalFinisherDSP::setLowCut(double normalized) noexcept {
@@ -393,6 +441,30 @@ void MetalFinisherDSP::processFrame(
     } else {
         autoLevel_.reset();
     }
+
+    // MASS is a fixed, level-conscious guitar character stage:
+    // broad low-end weight plus nearby low-mid cleanup. The full curve is
+    // built first and then linearly interpolated, so 50% is sample-exactly
+    // halfway between OFF and 100%.
+    const double massFullLeft =
+        kMassTrimGain *
+        massCleanup_[0].process(
+            massBoost_[0].process(
+                processedLeft));
+
+    const double massFullRight =
+        kMassTrimGain *
+        massCleanup_[1].process(
+            massBoost_[1].process(
+                processedRight));
+
+    processedLeft +=
+        (massFullLeft - processedLeft) *
+        mass_;
+
+    processedRight +=
+        (massFullRight - processedRight) *
+        mass_;
 
     double roomLeft = 0.0;
     double roomRight = 0.0;

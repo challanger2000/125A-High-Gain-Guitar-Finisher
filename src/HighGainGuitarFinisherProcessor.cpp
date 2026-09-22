@@ -81,6 +81,7 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
     finisher_.setMode(mode_);
+    finisher_.setMass(mass_);
     lastBypassed_ = bypass_ >= 0.5;
 
     return AudioEffect::setupProcessing(setup);
@@ -136,6 +137,7 @@ void Processor::readParameterChanges(IParameterChanges* changes) {
             case kBypass:   bypass_ = value; break;
             case kLowCut80: lowCut_ = value; break;
             case kMode:     mode_ = value; break;
+            case kMass:     mass_ = value; break;
             default: break;
         }
     }
@@ -167,6 +169,7 @@ void Processor::processBlock(
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
     finisher_.setMode(mode_);
+    finisher_.setMass(mass_);
 
     for (int32 sample = 0; sample < numSamples; ++sample) {
         const Sample* inputLeft = inputs[0];
@@ -363,7 +366,19 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
         mode_ = 0.0;
     }
 
+    if (version >= 6) {
+        if (!stream.readDouble(mass_) ||
+            !std::isfinite(mass_)) {
+            return kResultFalse;
+        }
+
+        mass_ = std::clamp(mass_, 0.0, 1.0);
+    } else {
+        mass_ = 0.0;
+    }
+
     finisher_.setFinish(finish_);
+    finisher_.setMass(mass_);
     finisher_.setLowCut(lowCut_);
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
@@ -383,14 +398,15 @@ tresult PLUGIN_API Processor::getState(IBStream* state) {
     if (!stream.writeInt32(kStateVersion))
         return kResultFalse;
 
-    const double values[7] {
+    const double values[8] {
         finish_,
         room_,
         output_,
         bypass_,
         lowCut_,
         roomDecay_,
-        mode_
+        mode_,
+        mass_
     };
 
     for (const double value : values) {

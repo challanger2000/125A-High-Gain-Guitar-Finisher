@@ -1,2 +1,2 @@
-Optimizer rework verification build 22
-Reason: verify new MASS 0-100% character stage, state version 6, GUI/parameter wiring, exact MASS 0/50/100 interpolation, measured MASS response, FINISH+MASS sample-rate stability, and all existing validator/optimizer/auto-level/ROOM regressions.
+Optimizer rework verification build 23
+Reason: verify expanded MASS range for clearly audible user-controlled intensity, updated MASS response guards, exact MASS 0/50/100 interpolation, FINISH+MASS stability, and all existing validator/optimizer/auto-level/ROOM regressions.

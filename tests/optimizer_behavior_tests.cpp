@@ -114,6 +114,134 @@ struct ModeSpectrum {
     double fizz {0.0};
 };
 
+struct EdgeProtectionResult {
+    double subRatio {1.0};
+    double airRatio {1.0};
+};
+
+EdgeProtectionResult measureEdgeProtection() {
+    MetalFinisherDSP dsp;
+    dsp.prepare(kSampleRate);
+    dsp.setFinish(1.0);
+    dsp.setMode(0.0);
+
+    constexpr double subHz = 45.0;
+    constexpr double airHz = 14000.0;
+
+    constexpr int warmup =
+        static_cast<int>(kSampleRate * 3.0);
+
+    constexpr int measured =
+        static_cast<int>(kSampleRate * 3.0);
+
+    double inSubSin = 0.0;
+    double inSubCos = 0.0;
+    double outSubSin = 0.0;
+    double outSubCos = 0.0;
+
+    double inAirSin = 0.0;
+    double inAirCos = 0.0;
+    double outAirSin = 0.0;
+    double outAirCos = 0.0;
+
+    for (int i = 0;
+         i < warmup + measured;
+         ++i) {
+
+        const double time =
+            static_cast<double>(i) /
+            kSampleRate;
+
+        const double input =
+            0.12 * std::sin(
+                2.0 * kPi * subHz * time) +
+            0.48 * std::sin(
+                2.0 * kPi * 350.0 * time) +
+            0.04 * std::sin(
+                2.0 * kPi * 1650.0 * time) +
+            0.48 * std::sin(
+                2.0 * kPi * 3900.0 * time) +
+            0.40 * std::sin(
+                2.0 * kPi * 7800.0 * time) +
+            0.08 * std::sin(
+                2.0 * kPi * airHz * time);
+
+        double left = input;
+        double right = input;
+
+        dsp.processFrame(left, right);
+
+        HGGF_REQUIRE(std::isfinite(left));
+        HGGF_REQUIRE(std::isfinite(right));
+
+        if (i >= warmup) {
+            const double subPhase =
+                2.0 * kPi * subHz * time;
+
+            const double airPhase =
+                2.0 * kPi * airHz * time;
+
+            const double subSin =
+                std::sin(subPhase);
+
+            const double subCos =
+                std::cos(subPhase);
+
+            const double airSin =
+                std::sin(airPhase);
+
+            const double airCos =
+                std::cos(airPhase);
+
+            inSubSin += input * subSin;
+            inSubCos += input * subCos;
+            outSubSin += left * subSin;
+            outSubCos += left * subCos;
+
+            inAirSin += input * airSin;
+            inAirCos += input * airCos;
+            outAirSin += left * airSin;
+            outAirCos += left * airCos;
+        }
+    }
+
+    const auto magnitude =
+        [measured](double sinSum,
+                   double cosSum) {
+            return
+                2.0 /
+                static_cast<double>(measured) *
+                std::sqrt(
+                    sinSum * sinSum +
+                    cosSum * cosSum);
+        };
+
+    const double inSub =
+        magnitude(
+            inSubSin,
+            inSubCos);
+
+    const double outSub =
+        magnitude(
+            outSubSin,
+            outSubCos);
+
+    const double inAir =
+        magnitude(
+            inAirSin,
+            inAirCos);
+
+    const double outAir =
+        magnitude(
+            outAirSin,
+            outAirCos);
+
+    return {
+        outSub / inSub,
+        outAir / inAir
+    };
+}
+
 ModeSpectrum measureModeSpectrum(double mode) {
     MetalFinisherDSP dsp;
     dsp.prepare(kSampleRate);
@@ -325,6 +453,23 @@ int main() {
     HGGF_REQUIRE(multiProblem.maxHarsh > 0.04);
     HGGF_REQUIRE(multiProblem.maxFizz > 0.04);
 
+    const auto edgeProtection =
+        measureEdgeProtection();
+
+    const double subDeltaDb =
+        20.0 * std::log10(
+            edgeProtection.subRatio);
+
+    const double airDeltaDb =
+        20.0 * std::log10(
+            edgeProtection.airRatio);
+
+    HGGF_REQUIRE(
+        std::abs(subDeltaDb) < 0.35);
+
+    HGGF_REQUIRE(
+        std::abs(airDeltaDb) < 0.35);
+
     const auto mode1 =
         measureModeSpectrum(0.0);
 
@@ -410,6 +555,9 @@ int main() {
         << multiProblem.finalArticulationCorrection << " / "
         << multiProblem.maxHarsh << " / "
         << multiProblem.maxFizz << "\n"
+        << "Protected sub/air delta dB: "
+        << subDeltaDb << " / "
+        << airDeltaDb << "\n"
         << "Mode 1 body/articulation/harsh/fizz: "
         << mode1.body << " / "
         << mode1.articulation << " / "

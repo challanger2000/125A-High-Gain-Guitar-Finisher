@@ -30,11 +30,13 @@ Result runScenario(
     double articulation,
     double harsh,
     double fizz,
-    bool pulseLow) {
+    bool pulseLow,
+    double mode = 0.0) {
 
     MetalFinisherDSP dsp;
     dsp.prepare(kSampleRate);
     dsp.setFinish(1.0);
+    dsp.setMode(mode);
 
     Result result;
 
@@ -103,6 +105,107 @@ Result runScenario(
     }
 
     return result;
+}
+
+struct ModeSpectrum {
+    double body {0.0};
+    double articulation {0.0};
+    double harsh {0.0};
+    double fizz {0.0};
+};
+
+ModeSpectrum measureModeSpectrum(double mode) {
+    MetalFinisherDSP dsp;
+    dsp.prepare(kSampleRate);
+    dsp.setFinish(1.0);
+    dsp.setMode(mode);
+
+    constexpr double bodyHz = 350.0;
+    constexpr double articulationHz = 1650.0;
+    constexpr double harshHz = 3900.0;
+    constexpr double fizzHz = 7800.0;
+
+    constexpr int warmup =
+        static_cast<int>(kSampleRate * 2.0);
+
+    constexpr int measured =
+        static_cast<int>(kSampleRate * 3.0);
+
+    std::array<double, 4> sinSum {};
+    std::array<double, 4> cosSum {};
+
+    const std::array<double, 4> frequencies {
+        bodyHz,
+        articulationHz,
+        harshHz,
+        fizzHz
+    };
+
+    for (int i = 0;
+         i < warmup + measured;
+         ++i) {
+
+        const double time =
+            static_cast<double>(i) /
+            kSampleRate;
+
+        const double input =
+            0.45 * std::sin(
+                2.0 * kPi * bodyHz * time) +
+            0.03 * std::sin(
+                2.0 * kPi * articulationHz * time) +
+            0.50 * std::sin(
+                2.0 * kPi * harshHz * time) +
+            0.42 * std::sin(
+                2.0 * kPi * fizzHz * time);
+
+        double left = input;
+        double right = input;
+
+        dsp.processFrame(left, right);
+
+        HGGF_REQUIRE(std::isfinite(left));
+        HGGF_REQUIRE(std::isfinite(right));
+
+        if (i >= warmup) {
+            for (std::size_t band = 0;
+                 band < frequencies.size();
+                 ++band) {
+
+                const double phase =
+                    2.0 * kPi *
+                    frequencies[band] *
+                    time;
+
+                sinSum[band] +=
+                    left * std::sin(phase);
+
+                cosSum[band] +=
+                    left * std::cos(phase);
+            }
+        }
+    }
+
+    std::array<double, 4> magnitude {};
+
+    for (std::size_t band = 0;
+         band < magnitude.size();
+         ++band) {
+
+        magnitude[band] =
+            2.0 /
+            static_cast<double>(measured) *
+            std::sqrt(
+                sinSum[band] * sinSum[band] +
+                cosSum[band] * cosSum[band]);
+    }
+
+    return {
+        magnitude[0],
+        magnitude[1],
+        magnitude[2],
+        magnitude[3]
+    };
 }
 
 } // namespace
@@ -222,6 +325,42 @@ int main() {
     HGGF_REQUIRE(multiProblem.maxHarsh > 0.04);
     HGGF_REQUIRE(multiProblem.maxFizz > 0.04);
 
+    const auto mode1 =
+        measureModeSpectrum(0.0);
+
+    const auto mode2 =
+        measureModeSpectrum(0.5);
+
+    const auto mode3 =
+        measureModeSpectrum(1.0);
+
+    // Mode 2 is the more aggressive/forward profile: more articulation and
+    // more intended upper-mid/fizz character survive than in the baseline.
+    HGGF_REQUIRE(
+        mode2.articulation >
+        mode1.articulation * 1.02);
+    HGGF_REQUIRE(
+        mode2.harsh >
+        mode1.harsh * 1.01);
+    HGGF_REQUIRE(
+        mode2.fizz >
+        mode1.fizz * 1.01);
+
+    // Mode 3 is the denser/darker profile: more body survives, while the
+    // support boost and top-end energy are reduced relative to Mode 1.
+    HGGF_REQUIRE(
+        mode3.body >
+        mode1.body * 1.01);
+    HGGF_REQUIRE(
+        mode3.articulation <
+        mode1.articulation * 0.99);
+    HGGF_REQUIRE(
+        mode3.harsh <
+        mode1.harsh * 0.99);
+    HGGF_REQUIRE(
+        mode3.fizz <
+        mode1.fizz * 0.99);
+
     std::cout
         << "Optimizer behavior tests passed\n"
         << "Chug reduction: "
@@ -239,7 +378,22 @@ int main() {
         << multiProblem.maxBodyCut << " / "
         << multiProblem.finalArticulationCorrection << " / "
         << multiProblem.maxHarsh << " / "
-        << multiProblem.maxFizz << "\n";
+        << multiProblem.maxFizz << "\n"
+        << "Mode 1 body/articulation/harsh/fizz: "
+        << mode1.body << " / "
+        << mode1.articulation << " / "
+        << mode1.harsh << " / "
+        << mode1.fizz << "\n"
+        << "Mode 2 body/articulation/harsh/fizz: "
+        << mode2.body << " / "
+        << mode2.articulation << " / "
+        << mode2.harsh << " / "
+        << mode2.fizz << "\n"
+        << "Mode 3 body/articulation/harsh/fizz: "
+        << mode3.body << " / "
+        << mode3.articulation << " / "
+        << mode3.harsh << " / "
+        << mode3.fizz << "\n";
 
     return 0;
 }

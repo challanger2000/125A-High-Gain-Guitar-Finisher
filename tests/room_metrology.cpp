@@ -127,6 +127,69 @@ void verifyRoomZero() {
     }
 }
 
+
+void verifyAdaptiveDucking() {
+    IndustrialRoom quiet;
+    quiet.prepare(kSampleRate);
+    quiet.setWetDry(1.0);
+    quiet.setDecay(0.6);
+
+    for (int i = 0;
+         i < static_cast<int>(kSampleRate * 2.0);
+         ++i) {
+
+        const double t =
+            static_cast<double>(i) / kSampleRate;
+
+        const double input =
+            0.02 * std::sin(
+                2.0 * kPi * 900.0 * t);
+
+        double wetLeft = 0.0;
+        double wetRight = 0.0;
+
+        quiet.processFrame(
+            input,
+            input,
+            wetLeft,
+            wetRight);
+    }
+
+    HGGF_REQUIRE(
+        quiet.currentDuckGain() > 0.95);
+
+    IndustrialRoom loud;
+    loud.prepare(kSampleRate);
+    loud.setWetDry(1.0);
+    loud.setDecay(0.6);
+
+    for (int i = 0;
+         i < static_cast<int>(kSampleRate * 2.0);
+         ++i) {
+
+        const double t =
+            static_cast<double>(i) / kSampleRate;
+
+        const double input =
+            0.55 * std::sin(
+                2.0 * kPi * 900.0 * t);
+
+        double wetLeft = 0.0;
+        double wetRight = 0.0;
+
+        loud.processFrame(
+            input,
+            input,
+            wetLeft,
+            wetRight);
+    }
+
+    HGGF_REQUIRE(
+        loud.currentDuckGain() < 0.75);
+    HGGF_REQUIRE(
+        loud.currentDuckGain() >= 0.67);
+}
+
 void verifyTimingAcrossSampleRates() {
     for (const double sampleRate :
          {44100.0, 48000.0, 96000.0}) {
@@ -346,6 +409,7 @@ int main() {
     verifyRoomZero();
     verifyTimingAcrossSampleRates();
     verifyTailClears();
+    verifyAdaptiveDucking();
     verifyIndependentDecay();
 
     const double wetToDryDb =

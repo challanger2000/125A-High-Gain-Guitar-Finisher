@@ -2,6 +2,11 @@ name: Build Windows VST3
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - optimizer-rework
+    paths:
+      - OPTIMIZER_REWORK_BUILD_TRIGGER.txt
 
 jobs:
   build:

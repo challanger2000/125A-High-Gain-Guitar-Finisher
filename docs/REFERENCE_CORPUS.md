@@ -318,3 +318,22 @@ Cnoc An Tursa is the second real-programme family and is especially valuable for
 - crest-factor preservation on dense high-gain material
 
 No production threshold should be derived from this family alone.
+
+
+### Bass-control observation and LOW CUT validation
+
+The retained Bannockburn bass tracks were used as a control for the guitar low-frequency measurements.
+
+Whole-file relative band energy:
+
+- Bass DI: 20-80 Hz -3.72 dB, 80-200 Hz -3.99 dB
+- Bass Amp: 20-80 Hz -3.65 dB, 80-200 Hz -3.87 dB
+- Guitar Mic 1 example: 20-80 Hz -30.94 dB, 80-200 Hz -7.98 dB
+- Guitar Mic 2 example: 20-80 Hz -29.06 dB, 80-200 Hz -7.33 dB
+
+This cleanly separates bass fundamental energy from the high-gain guitar sub region in this reference family.
+
+The current manual guitar LOW CUT range of 45-120 Hz is therefore retained:
+- the lower part primarily removes sub-guitar energy,
+- higher settings intentionally reach into low-tuned guitar/chug fundamentals,
+- no automatic narrowing or upward shift is justified by the current real references.

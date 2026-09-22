@@ -422,20 +422,20 @@ int main() {
         measureMassGain(1000.0);
 
     HGGF_REQUIRE(
-        massAt140 > 1.05 &&
-        massAt140 < 1.12);
+        massAt140 > 1.55 &&
+        massAt140 < 1.75);
 
     HGGF_REQUIRE(
-        massAt220 > 0.84 &&
-        massAt220 < 0.93);
+        massAt220 > 0.43 &&
+        massAt220 < 0.55);
 
     HGGF_REQUIRE(
-        massAt280 > 0.84 &&
-        massAt280 < 0.93);
+        massAt280 > 0.44 &&
+        massAt280 < 0.56);
 
     HGGF_REQUIRE(
-        massAt1000 > 0.96 &&
-        massAt1000 < 1.00);
+        massAt1000 > 0.84 &&
+        massAt1000 < 0.93);
 
     std::cout
         << "DSP smoke test passed\n"

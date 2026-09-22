@@ -49,29 +49,23 @@ void MetalFinisherDSP::prepare(double sampleRate) {
         {6000.0, 7500.0, 9000.0, 11000.0},
         1.0);
 
-    const auto protectSub =
-        makeLowPass(
+    const auto unityLowShelf =
+        makeLowShelf(
             sampleRate_,
-            70.0,
-            0.7071067811865476);
+            80.0,
+            0.0);
 
-    const auto protectAir =
-        makeHighPass(
+    const auto unityHighShelf =
+        makeHighShelf(
             sampleRate_,
-            11000.0,
-            0.7071067811865476);
+            10000.0,
+            0.0);
 
-    for (auto& filter : protectSubDry_)
-        filter.setCoefficients(protectSub);
+    for (auto& filter : makeupLowShelf_)
+        filter.setCoefficients(unityLowShelf);
 
-    for (auto& filter : protectSubWet_)
-        filter.setCoefficients(protectSub);
-
-    for (auto& filter : protectAirDry_)
-        filter.setCoefficients(protectAir);
-
-    for (auto& filter : protectAirWet_)
-        filter.setCoefficients(protectAir);
+    for (auto& filter : makeupHighShelf_)
+        filter.setCoefficients(unityHighShelf);
 
     autoLevel_.prepare(sampleRate_);
     room_.prepare(sampleRate_);
@@ -84,17 +78,13 @@ void MetalFinisherDSP::reset() noexcept {
     for (auto& filter : lowCut_)
         filter.reset();
 
-    for (auto& filter : protectSubDry_)
+    for (auto& filter : makeupLowShelf_)
         filter.reset();
 
-    for (auto& filter : protectSubWet_)
+    for (auto& filter : makeupHighShelf_)
         filter.reset();
 
-    for (auto& filter : protectAirDry_)
-        filter.reset();
-
-    for (auto& filter : protectAirWet_)
-        filter.reset();
+    makeupShelfCoefficientCountdown_ = 0;
 
     lowEnd_.reset();
     body_.reset();
@@ -150,14 +140,11 @@ void MetalFinisherDSP::setFinish(double normalized) noexcept {
         fizz_.reset();
         autoLevel_.reset();
 
-        for (auto& filter : protectSubDry_)
+        for (auto& filter : makeupLowShelf_)
             filter.reset();
-        for (auto& filter : protectSubWet_)
+        for (auto& filter : makeupHighShelf_)
             filter.reset();
-        for (auto& filter : protectAirDry_)
-            filter.reset();
-        for (auto& filter : protectAirWet_)
-            filter.reset();
+        makeupShelfCoefficientCountdown_ = 0;
     }
 }
 
@@ -180,6 +167,29 @@ void MetalFinisherDSP::updateLowCutCoefficients() noexcept {
 
     for (auto& filter : lowCut_)
         filter.setCoefficients(coefficients);
+}
+
+void MetalFinisherDSP::updateMakeupShelfCoefficients() noexcept {
+    const double cancellationDb =
+        -autoLevel_.currentGainDb();
+
+    const auto lowShelf =
+        makeLowShelf(
+            sampleRate_,
+            80.0,
+            cancellationDb);
+
+    const auto highShelf =
+        makeHighShelf(
+            sampleRate_,
+            10000.0,
+            cancellationDb);
+
+    for (auto& filter : makeupLowShelf_)
+        filter.setCoefficients(lowShelf);
+
+    for (auto& filter : makeupHighShelf_)
+        filter.setCoefficients(highShelf);
 }
 
 void MetalFinisherDSP::setRoomWet(double normalized) noexcept {
@@ -372,50 +382,24 @@ void MetalFinisherDSP::processFrame(
             processedLeft,
             processedRight);
 
-        // The global level match is intentionally full-band for a fair A/B.
-        // Afterwards restore only the protected edge bands from the dry base.
-        // Matched dry/wet filters have identical phase, so their difference
-        // corrects the band without reconstructing the whole signal through
-        // a phase-shifted crossover path.
-        const double drySubLeft =
-            protectSubDry_[0].process(
-                baseLeft);
+        // The level matcher is global for a fair A/B, but its makeup must not
+        // create a broadband sub/air lift. Cancel only that makeup at the
+        // spectrum edges with slowly updated shelves. The optimizer's core
+        // 80 Hz-10 kHz decisions remain untouched.
+        if (--makeupShelfCoefficientCountdown_ <= 0) {
+            updateMakeupShelfCoefficients();
+            makeupShelfCoefficientCountdown_ = 16;
+        }
 
-        const double drySubRight =
-            protectSubDry_[1].process(
-                baseRight);
+        processedLeft =
+            makeupHighShelf_[0].process(
+                makeupLowShelf_[0].process(
+                    processedLeft));
 
-        const double wetSubLeft =
-            protectSubWet_[0].process(
-                processedLeft);
-
-        const double wetSubRight =
-            protectSubWet_[1].process(
-                processedRight);
-
-        const double dryAirLeft =
-            protectAirDry_[0].process(
-                baseLeft);
-
-        const double dryAirRight =
-            protectAirDry_[1].process(
-                baseRight);
-
-        const double wetAirLeft =
-            protectAirWet_[0].process(
-                processedLeft);
-
-        const double wetAirRight =
-            protectAirWet_[1].process(
-                processedRight);
-
-        processedLeft +=
-            (drySubLeft - wetSubLeft) +
-            (dryAirLeft - wetAirLeft);
-
-        processedRight +=
-            (drySubRight - wetSubRight) +
-            (dryAirRight - wetAirRight);
+        processedRight =
+            makeupHighShelf_[1].process(
+                makeupLowShelf_[1].process(
+                    processedRight));
     } else {
         autoLevel_.reset();
     }

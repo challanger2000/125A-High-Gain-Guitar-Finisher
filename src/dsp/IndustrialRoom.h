@@ -29,6 +29,10 @@ public:
         return decay_;
     }
 
+    double currentDuckGain() const noexcept {
+        return duckGain_;
+    }
+
 private:
     class CircularDelay {
     public:
@@ -77,6 +81,7 @@ private:
     double duckEnvelope_ {0.0};
     double duckAttack_ {0.0};
     double duckRelease_ {0.0};
+    double duckGain_ {1.0};
 
     bool tailCleared_ {true};
 };

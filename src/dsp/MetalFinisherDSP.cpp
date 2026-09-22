@@ -7,12 +7,12 @@ namespace HighGainGuitarFinisher::dsp {
 
 namespace {
 constexpr double kMassBoostHz = 140.0;
-constexpr double kMassBoostDb = 1.75;
+constexpr double kMassBoostDb = 10.50;
 constexpr double kMassBoostQ = 1.20;
 constexpr double kMassCleanupHz = 220.0;
-constexpr double kMassCleanupDb = -1.75;
+constexpr double kMassCleanupDb = -10.50;
 constexpr double kMassCleanupQ = 1.00;
-constexpr double kMassTrimGain = 0.9885530946569389; // -0.10 dB
+constexpr double kMassTrimGain = 0.9332543007969910; // -0.60 dB
 }
 
 void MetalFinisherDSP::prepare(double sampleRate) {

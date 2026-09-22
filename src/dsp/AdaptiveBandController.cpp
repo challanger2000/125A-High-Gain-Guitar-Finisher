@@ -225,10 +225,13 @@ void AdaptiveBandController::processFrame(
         (wideSlowEnergy_ + kEpsilon));
 
     if (mode_ == AdaptiveBandMode::BodyResonance) {
-        const double excess = std::clamp(
-            (peakiness - 1.12) / 1.00,
-            0.0,
-            1.0);
+        const double excess =
+            dominance > 0.080
+                ? std::clamp(
+                    (peakiness - 1.12) / 1.00,
+                    0.0,
+                    1.0)
+                : 0.0;
 
         const double deficit = std::clamp(
             (0.105 - dominance) / 0.060,
@@ -259,10 +262,13 @@ void AdaptiveBandController::processFrame(
             0.0,
             1.0);
 
-        const double excess = std::clamp(
-            (peakiness - 1.65) / 1.80,
-            0.0,
-            1.0);
+        const double excess =
+            dominance > 0.070
+                ? std::clamp(
+                    (peakiness - 1.65) / 1.80,
+                    0.0,
+                    1.0)
+                : 0.0;
 
         targetReduction =
             excess > 0.20

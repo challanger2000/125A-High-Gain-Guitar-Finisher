@@ -1,2 +1,2 @@
-Optimizer rework verification build 12
-Reason: verify matched dry/wet sub-air protection, phrase bootstrap and mode profiles.
+Optimizer rework verification build 13
+Reason: measure exact protected sub and air deltas before final edge-protection tuning.

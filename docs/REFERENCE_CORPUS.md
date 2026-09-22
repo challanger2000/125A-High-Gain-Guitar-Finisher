@@ -233,3 +233,88 @@ Cambridge lists:
 - Full Multitrack: 43 tracks, approximately 999 MB
 
 Priority: high. Prefer the edited excerpt first if it preserves the guitar DI/cab pairs; use the full multitrack only if required.
+
+
+## Measured Cnoc An Tursa baseline
+
+Uploaded source:
+- Cnoc An Tursa — Bannockburn edited excerpt
+- 24-bit / 44.1 kHz mono
+- 155 BPM
+- 28.401 seconds
+- educational-use multitrack excerpt
+
+Retained tracks:
+- Bass DI + Bass Amp
+- four Electric Guitar DI tracks
+- four corresponding Guitar Mic 1 tracks
+- four corresponding Guitar Mic 2 tracks
+
+### DI / cab sanity
+
+Across the four guitars:
+- DI crest factors are approximately 17.36-19.11 dB
+- mic/cab crest factors are approximately 11.83-12.54 dB
+
+Mic 1 and Mic 2 are aligned to about 2 samples (0.045 ms) and correlate around 0.95 after that offset, confirming that they are closely related alternate cabinet/microphone captures of the same performances.
+
+Mic 1 consistently contains more 5-10 kHz energy than Mic 2, making the pair useful as a real brighter/aggressive versus darker/controlled tonal family.
+
+### Active-window corridor
+
+Eight guitar mic tracks produced 224 active one-second windows above -35 dBFS.
+
+Aggregate P10 / P25 / median / P75 / P90:
+
+| Metric | P10 | P25 | Median | P75 | P90 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| RMS dBFS | -16.21 | -15.94 | -15.52 | -14.95 | -14.64 |
+| Crest dB | 10.64 | 10.90 | 11.23 | 11.55 | 11.76 |
+| 20-80 Hz | -29.76 | -28.70 | -27.66 | -26.49 | -25.44 |
+| 80-200 Hz | -8.83 | -8.37 | -7.84 | -7.33 | -6.83 |
+| 200-640 Hz | -8.08 | -7.29 | -6.36 | -5.56 | -4.95 |
+| 640-2500 Hz | -4.34 | -3.91 | -3.51 | -3.16 | -2.90 |
+| 2500-5000 Hz | -9.46 | -9.01 | -8.56 | -7.99 | -7.68 |
+| 5000-10000 Hz | -25.26 | -24.93 | -22.67 | -20.38 | -19.98 |
+| 10000-20000 Hz | -46.92 | -46.29 | -43.67 | -40.91 | -40.09 |
+
+Band values are normalized to measured 20 Hz-20 kHz energy per one-second window.
+
+### Mic-family medians
+
+Mic 1:
+- RMS -15.33 dBFS
+- crest 11.20 dB
+- bands: -28.43 / -8.14 / -6.59 / -3.31 / -8.53 / -20.38 / -40.89 dB
+
+Mic 2:
+- RMS -15.63 dBFS
+- crest 11.26 dB
+- bands: -26.88 / -7.58 / -6.06 / -3.74 / -8.57 / -24.93 / -46.29 dB
+
+The largest stable family difference is above 5 kHz: Mic 1 is the brighter capture, while Mic 2 is darker and smoother.
+
+### Detector-bank validation on real programme
+
+Dominant current detector centers across the 224 active windows:
+
+- Low: 110 Hz in 158 windows, 145 Hz in 63, 180 Hz in 3
+- Body: 390 Hz in 142, 500 Hz in 51, 220 Hz in 24, 300 Hz in 7
+- Articulation: 2400 Hz in 158, 800 Hz in 62, 1750 Hz in 4
+- Harshness: 2800 Hz in 115, 3600 Hz in 109
+- Fizz: 6000 Hz in all 224 windows
+
+This strongly supports the current five detector-bank center sets on real death-metal cabinet material. The highest Fizz centers (9/11 kHz) remain useful candidates for other amp/cab families but are not dominant in this source.
+
+### Acceptance use
+
+Cnoc An Tursa is the second real-programme family and is especially valuable for:
+- DI-to-real-cab comparisons
+- bright versus dark real mic captures
+- low/chug and body detector validation
+- 2.8/3.6 kHz harshness validation
+- 6 kHz fizz validation
+- mode-character comparisons
+- crest-factor preservation on dense high-gain material
+
+No production threshold should be derived from this family alone.

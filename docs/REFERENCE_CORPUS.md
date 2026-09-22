@@ -337,3 +337,17 @@ The current manual guitar LOW CUT range of 45-120 Hz is therefore retained:
 - the lower part primarily removes sub-guitar energy,
 - higher settings intentionally reach into low-tuned guitar/chug fundamentals,
 - no automatic narrowing or upward shift is justified by the current real references.
+
+
+### Mode-character cross-check
+
+The real Bannockburn Mic 1 versus Mic 2 family difference is concentrated mainly above 5 kHz:
+
+- Mic 1 minus Mic 2 median 5-10 kHz energy: approximately +4.52 dB
+- Mic 1 minus Mic 2 median 10-20 kHz energy: approximately +5.45 dB
+
+An earlier real-guitar render of the finisher showed approximately +4.87 dB more 5-10 kHz energy in Mode 2 than Mode 3.
+
+This close order-of-magnitude match is useful validation that the current Mode 2 versus Mode 3 brightness/fizz separation is not obviously excessive relative to real alternate cab/microphone captures.
+
+It is not used as a target curve: the same Bannockburn mic pair differs much less in 2.5-5 kHz than the finisher modes, so the modes remain broader production characters rather than mic emulations.

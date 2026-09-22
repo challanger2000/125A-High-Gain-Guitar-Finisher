@@ -190,6 +190,123 @@ void verifyAdaptiveDucking() {
         loud.currentDuckGain() >= 0.67);
 }
 
+void verifyGuitarProgrammeStress() {
+    IndustrialRoom room;
+    room.prepare(kSampleRate);
+    room.setWetDry(1.0);
+    room.setDecay(0.70);
+
+    const int activeSamples =
+        static_cast<int>(kSampleRate * 2.0);
+
+    double minimumDuck = 1.0;
+    double activeWetPeak = 0.0;
+
+    for (int i = 0; i < activeSamples; ++i) {
+        const double t =
+            static_cast<double>(i) / kSampleRate;
+
+        const double local =
+            std::fmod(t, 0.25);
+
+        const bool palmMute =
+            local < 0.070;
+
+        const double envelope =
+            palmMute ? 1.0 : 0.42;
+
+        const double left =
+            envelope * (
+                0.30 * std::sin(2.0 * kPi * 105.0 * t) +
+                0.20 * std::sin(2.0 * kPi * 330.0 * t)) +
+            0.20 * std::sin(2.0 * kPi * 1200.0 * t) +
+            0.13 * std::sin(2.0 * kPi * 3900.0 * t);
+
+        const double right =
+            envelope * (
+                0.28 * std::sin(2.0 * kPi * 118.0 * t) +
+                0.19 * std::sin(2.0 * kPi * 370.0 * t)) +
+            0.19 * std::sin(2.0 * kPi * 1280.0 * t) +
+            0.12 * std::sin(2.0 * kPi * 4300.0 * t);
+
+        double wetLeft = 0.0;
+        double wetRight = 0.0;
+
+        room.processFrame(
+            left,
+            right,
+            wetLeft,
+            wetRight);
+
+        HGGF_REQUIRE(std::isfinite(wetLeft));
+        HGGF_REQUIRE(std::isfinite(wetRight));
+
+        minimumDuck =
+            std::min(
+                minimumDuck,
+                room.currentDuckGain());
+
+        activeWetPeak =
+            std::max(
+                activeWetPeak,
+                std::max(
+                    std::abs(wetLeft),
+                    std::abs(wetRight)));
+    }
+
+    HGGF_REQUIRE(minimumDuck < 0.80);
+    HGGF_REQUIRE(activeWetPeak > 1.0e-4);
+
+    double tailPeak = 0.0;
+    double recoveredDuck = room.currentDuckGain();
+
+    const int tailSamples =
+        static_cast<int>(kSampleRate * 1.5);
+
+    for (int i = 0; i < tailSamples; ++i) {
+        double wetLeft = 0.0;
+        double wetRight = 0.0;
+
+        room.processFrame(
+            0.0,
+            0.0,
+            wetLeft,
+            wetRight);
+
+        HGGF_REQUIRE(std::isfinite(wetLeft));
+        HGGF_REQUIRE(std::isfinite(wetRight));
+
+        if (i < static_cast<int>(kSampleRate * 0.40)) {
+            tailPeak =
+                std::max(
+                    tailPeak,
+                    std::max(
+                        std::abs(wetLeft),
+                        std::abs(wetRight)));
+        }
+
+        if (i ==
+            static_cast<int>(kSampleRate * 0.30)) {
+            recoveredDuck =
+                room.currentDuckGain();
+        }
+    }
+
+    // A hard stop must reveal a real room tail while the ducking detector
+    // releases back toward unity instead of holding the room suppressed.
+    HGGF_REQUIRE(tailPeak > 1.0e-5);
+    HGGF_REQUIRE(recoveredDuck > 0.90);
+    HGGF_REQUIRE(
+        recoveredDuck >
+        minimumDuck + 0.10);
+
+    std::cerr
+        << "ROOM guitar stress min/recovered duck, tail peak: "
+        << minimumDuck << " / "
+        << recoveredDuck << " / "
+        << tailPeak << "\n";
+}
+
 void verifyTimingAcrossSampleRates() {
     for (const double sampleRate :
          {44100.0, 48000.0, 96000.0}) {
@@ -410,6 +527,7 @@ int main() {
     verifyTimingAcrossSampleRates();
     verifyTailClears();
     verifyAdaptiveDucking();
+    verifyGuitarProgrammeStress();
     verifyIndependentDecay();
 
     const double wetToDryDb =

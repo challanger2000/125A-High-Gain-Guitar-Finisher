@@ -1,2 +1,2 @@
-Optimizer rework verification build 7
-Reason: run calibrated optimizer with Steinberg VST3 validator enabled.
+Optimizer rework verification build 8
+Reason: verify three measured optimizer modes, VST3 state compatibility and GUI selector.

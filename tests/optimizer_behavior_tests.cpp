@@ -18,6 +18,7 @@ struct Result {
     double maxBodyCut {0.0};
     double minBodySupport {0.0};
     double minArticulationSupport {0.0};
+    double finalArticulationCorrection {0.0};
     double finalArticulationDominance {0.0};
     double maxHarsh {0.0};
     double maxFizz {0.0};
@@ -85,6 +86,9 @@ Result runScenario(
         result.minArticulationSupport = std::min(
             result.minArticulationSupport,
             dsp.currentArticulationCorrection());
+
+        result.finalArticulationCorrection =
+            dsp.currentArticulationCorrection();
 
         result.finalArticulationDominance =
             dsp.currentArticulationDominance();
@@ -165,14 +169,28 @@ int main() {
         << articulationThin.finalArticulationDominance << " / "
         << articulationBalanced.finalArticulationDominance << " / "
         << articulationStrong.finalArticulationDominance << "\n"
-        << "Articulation correction thin/balanced/strong: "
-        << articulationThin.minArticulationSupport << " / "
-        << articulationBalanced.minArticulationSupport << " / "
-        << articulationStrong.minArticulationSupport << "\n";
+        << "Articulation correction final thin/balanced/strong: "
+        << articulationThin.finalArticulationCorrection << " / "
+        << articulationBalanced.finalArticulationCorrection << " / "
+        << articulationStrong.finalArticulationCorrection << "\n";
 
     HGGF_REQUIRE(
         articulationThin.finalArticulationDominance <
+        articulationBalanced.finalArticulationDominance);
+
+    HGGF_REQUIRE(
+        articulationBalanced.finalArticulationDominance <
         articulationStrong.finalArticulationDominance);
+
+    // Thin articulation must receive an audible but bounded support boost.
+    HGGF_REQUIRE(
+        articulationThin.finalArticulationCorrection <
+        -0.10);
+
+    // A balanced fixture must not be pushed upward by the support path.
+    HGGF_REQUIRE(
+        articulationBalanced.finalArticulationCorrection >
+        -0.03);
 
     const auto harshFizzHeavy =
         runScenario(
@@ -199,8 +217,8 @@ int main() {
     HGGF_REQUIRE(multiProblem.maxLow > 0.10);
     HGGF_REQUIRE(multiProblem.maxBodyCut > 0.05);
     HGGF_REQUIRE(
-        std::isfinite(
-            multiProblem.minArticulationSupport));
+        multiProblem.finalArticulationCorrection <
+        -0.05);
     HGGF_REQUIRE(multiProblem.maxHarsh > 0.04);
     HGGF_REQUIRE(multiProblem.maxFizz > 0.04);
 
@@ -219,7 +237,7 @@ int main() {
         << "Multi-problem low/body/articulation/harsh/fizz: "
         << multiProblem.maxLow << " / "
         << multiProblem.maxBodyCut << " / "
-        << multiProblem.minArticulationSupport << " / "
+        << multiProblem.finalArticulationCorrection << " / "
         << multiProblem.maxHarsh << " / "
         << multiProblem.maxFizz << "\n";
 

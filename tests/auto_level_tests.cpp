@@ -60,8 +60,8 @@ void verifyDirectCompensation(
 
         HGGF_REQUIRE(std::isfinite(left));
         HGGF_REQUIRE(std::isfinite(right));
-        HGGF_REQUIRE(level.currentGain() >= 1.0);
-        HGGF_REQUIRE(level.currentGainDb() <= 1.5001);
+        HGGF_REQUIRE(level.currentGainDb() >= -3.0001);
+        HGGF_REQUIRE(level.currentGainDb() <= 3.0001);
 
         if (i >= warmup) {
             inputSquares +=
@@ -89,12 +89,17 @@ void verifyDirectCompensation(
     const double deltaDb =
         linearToDb(outputRms / inputRms);
 
-    if (processedScale >= 0.85) {
+    if (processedScale >= 0.72 &&
+        processedScale <= 1.40) {
         HGGF_REQUIRE(std::abs(deltaDb) < 0.12);
-    } else {
-        // Heavy artificial loss exceeds the 1.5 dB safety cap.
-        HGGF_REQUIRE(level.currentGainDb() > 1.45);
+    } else if (processedScale < 0.72) {
+        // Heavy artificial loss exceeds the +3 dB safety cap.
+        HGGF_REQUIRE(level.currentGainDb() > 2.90);
         HGGF_REQUIRE(deltaDb < -1.0);
+    } else {
+        // Heavy artificial boost exceeds the -3 dB safety cap.
+        HGGF_REQUIRE(level.currentGainDb() < -2.90);
+        HGGF_REQUIRE(deltaDb > 1.0);
     }
 }
 
@@ -204,6 +209,14 @@ int main() {
         verifyDirectCompensation(
             sampleRate,
             0.50);
+
+        verifyDirectCompensation(
+            sampleRate,
+            1.10);
+
+        verifyDirectCompensation(
+            sampleRate,
+            2.00);
     }
 
     verifyFinishZeroAfterMakeup();

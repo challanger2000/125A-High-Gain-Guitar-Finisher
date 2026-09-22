@@ -164,8 +164,9 @@ void MetalFinisherDSP::updateModeTargets() noexcept {
             : (modeTarget_ < 0.75 ? 1 : 2);
 
     // Mode 1 is the already validated neutral/modern baseline.
-    // Mode 2 preserves more upper-mid bite and adds a little more definition.
-    // Mode 3 keeps more mass while controlling the top end more strongly.
+    // Mode 2 is the bite profile: it preserves substantially more upper-mid
+    // attack while still controlling fizz. Mode 3 keeps more mass while
+    // controlling the top end more strongly.
     if (mode == 0) {
         modeWeightTargets_ = {
             1.00, // chug
@@ -178,9 +179,9 @@ void MetalFinisherDSP::updateModeTargets() noexcept {
         modeWeightTargets_ = {
             1.10,
             0.80,
-            1.35,
-            0.55,
-            0.60
+            1.00,
+            0.15,
+            0.85
         };
     } else {
         modeWeightTargets_ = {

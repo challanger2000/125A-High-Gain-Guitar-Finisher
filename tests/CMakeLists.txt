@@ -165,3 +165,31 @@ add_test(
     NAME HighGainGuitarFinisher.DSP.Room
     COMMAND HighGainGuitarFinisherRoomTests
 )
+
+
+add_executable(HighGainGuitarOptimizerBehaviorTests
+    optimizer_behavior_tests.cpp
+    ${HGGF_DSP_SOURCES}
+)
+
+target_include_directories(
+    HighGainGuitarOptimizerBehaviorTests
+    PRIVATE
+        .
+        ../src/dsp
+)
+
+target_compile_features(
+    HighGainGuitarOptimizerBehaviorTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarOptimizerBehaviorTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.Optimizer.Behavior
+    COMMAND HighGainGuitarOptimizerBehaviorTests
+)

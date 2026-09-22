@@ -1,2 +1,2 @@
-Optimizer rework verification build 5
-Reason: measure articulation detector separation for thin, balanced and strong fixtures.
+Optimizer rework verification build 6
+Reason: verify calibrated articulation support and steady-state multi-zone behavior.

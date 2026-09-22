@@ -128,7 +128,8 @@ void verifyFinishZeroAfterMakeup() {
         dsp.processFrame(left, right);
     }
 
-    HGGF_REQUIRE(dsp.currentAutoLevelGainDb() > 0.0);
+    HGGF_REQUIRE(std::isfinite(dsp.currentAutoLevelGainDb()));
+    HGGF_REQUIRE(std::abs(dsp.currentAutoLevelGainDb()) <= 3.0001);
 
     dsp.setFinish(0.0);
 

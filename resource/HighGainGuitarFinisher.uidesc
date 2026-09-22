@@ -83,8 +83,8 @@
           round-radius="12"/>
 
     <view class="CTextLabel"
-          origin="58,121"
-          size="102,18"
+          origin="54,121"
+          size="188,18"
           title="T O N E"
           transparent="true"
           font-color="Muted"
@@ -142,6 +142,42 @@
           origin="55,279"
           size="108,14"
           title="OFF / 45–120 Hz"
+          transparent="true"
+          font-color="Minor"
+          font="MinorFont"
+          text-alignment="center"
+          mouse-enabled="false"/>
+
+    <view class="CView"
+          custom-view-name="HGGFKnobMass"
+          origin="169,160"
+          size="68,68"/>
+
+    <view class="CTextLabel"
+          origin="153,231"
+          size="100,16"
+          title="MASS"
+          transparent="true"
+          font-color="Text"
+          font="Label"
+          text-alignment="center"
+          mouse-enabled="false"/>
+
+    <view class="CParamDisplay"
+          origin="153,249"
+          size="100,18"
+          control-tag="107"
+          transparent="true"
+          frame-width="0"
+          font-color="Value"
+          font="ValueFont"
+          text-alignment="center"
+          mouse-enabled="false"/>
+
+    <view class="CTextLabel"
+          origin="151,269"
+          size="104,14"
+          title="WEIGHT • CLEANUP"
           transparent="true"
           font-color="Minor"
           font="MinorFont"

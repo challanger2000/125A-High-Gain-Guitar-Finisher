@@ -16,6 +16,9 @@ void MetalFinisherDSP::prepare(double sampleRate) {
     lowCutFrequencySmoothing_ =
         std::exp(-1.0 / (sampleRate_ * 0.020));
 
+    modeSmoothing_ =
+        std::exp(-1.0 / (sampleRate_ * 0.030));
+
     lowEnd_.prepare(
         sampleRate_,
         AdaptiveBandMode::LowTransient,
@@ -49,6 +52,7 @@ void MetalFinisherDSP::prepare(double sampleRate) {
     autoLevel_.prepare(sampleRate_);
     room_.prepare(sampleRate_);
 
+    updateModeTargets();
     reset();
 }
 
@@ -63,6 +67,9 @@ void MetalFinisherDSP::reset() noexcept {
     fizz_.reset();
     autoLevel_.reset();
     room_.reset();
+
+    updateModeTargets();
+    modeWeights_ = modeWeightTargets_;
 
     const bool lowCutOn =
         lowCutEnabled(lowCutTarget_);
@@ -136,6 +143,54 @@ void MetalFinisherDSP::setRoomWet(double normalized) noexcept {
 
 void MetalFinisherDSP::setRoomDecay(double normalized) noexcept {
     room_.setDecay(normalized);
+}
+
+void MetalFinisherDSP::setMode(double normalized) noexcept {
+    modeTarget_ =
+        std::clamp(
+            std::isfinite(normalized)
+                ? normalized
+                : 0.0,
+            0.0,
+            1.0);
+
+    updateModeTargets();
+}
+
+void MetalFinisherDSP::updateModeTargets() noexcept {
+    const int mode =
+        modeTarget_ < 0.25
+            ? 0
+            : (modeTarget_ < 0.75 ? 1 : 2);
+
+    // Mode 1 is the already validated neutral/modern baseline.
+    // Mode 2 preserves more upper-mid bite and adds a little more definition.
+    // Mode 3 keeps more mass while controlling the top end more strongly.
+    if (mode == 0) {
+        modeWeightTargets_ = {
+            1.00, // chug
+            1.00, // body
+            1.00, // articulation
+            1.00, // harshness
+            1.00  // fizz
+        };
+    } else if (mode == 1) {
+        modeWeightTargets_ = {
+            1.05,
+            0.85,
+            1.15,
+            0.65,
+            0.70
+        };
+    } else {
+        modeWeightTargets_ = {
+            0.70,
+            0.65,
+            0.45,
+            1.15,
+            1.20
+        };
+    }
 }
 
 void MetalFinisherDSP::processFrame(
@@ -234,19 +289,28 @@ void MetalFinisherDSP::processFrame(
             fizzLeft,
             fizzRight);
 
+        for (std::size_t i = 0;
+             i < modeWeights_.size();
+             ++i) {
+            modeWeights_[i] =
+                modeSmoothing_ * modeWeights_[i] +
+                (1.0 - modeSmoothing_) *
+                    modeWeightTargets_[i];
+        }
+
         const double correctionLeft =
-            (lowLeft - baseLeft) +
-            (bodyLeft - baseLeft) +
-            (articulationLeft - baseLeft) +
-            (harshLeft - baseLeft) +
-            (fizzLeft - baseLeft);
+            modeWeights_[0] * (lowLeft - baseLeft) +
+            modeWeights_[1] * (bodyLeft - baseLeft) +
+            modeWeights_[2] * (articulationLeft - baseLeft) +
+            modeWeights_[3] * (harshLeft - baseLeft) +
+            modeWeights_[4] * (fizzLeft - baseLeft);
 
         const double correctionRight =
-            (lowRight - baseRight) +
-            (bodyRight - baseRight) +
-            (articulationRight - baseRight) +
-            (harshRight - baseRight) +
-            (fizzRight - baseRight);
+            modeWeights_[0] * (lowRight - baseRight) +
+            modeWeights_[1] * (bodyRight - baseRight) +
+            modeWeights_[2] * (articulationRight - baseRight) +
+            modeWeights_[3] * (harshRight - baseRight) +
+            modeWeights_[4] * (fizzRight - baseRight);
 
         processedLeft =
             baseLeft +

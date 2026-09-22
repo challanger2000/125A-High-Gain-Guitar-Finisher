@@ -274,13 +274,18 @@ void AdaptiveBandController::processFrame(
 
         targetReduction = 0.55 * activity;
     } else if (mode_ == AdaptiveBandMode::ArticulationSupport) {
+        // Measured fixture separation after the detector-bank audit:
+        // thin ~0.40, balanced ~0.56, articulation-heavy ~0.77.
+        // Use the gap between thin and balanced as the support corridor
+        // instead of the old absolute threshold, which was far below the
+        // detector's real operating scale because of neighbouring-band energy.
         const double deficit = std::clamp(
-            (0.090 - dominance) / 0.055,
+            (0.54 - dominance) / 0.18,
             0.0,
             1.0);
 
         const double excess =
-            dominance > 0.070
+            dominance > 0.68
                 ? std::clamp(
                     (peakiness - 1.65) / 1.80,
                     0.0,

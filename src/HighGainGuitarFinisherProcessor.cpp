@@ -80,6 +80,7 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
     finisher_.setLowCut(lowCut_);
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
+    finisher_.setMode(mode_);
     lastBypassed_ = bypass_ >= 0.5;
 
     return AudioEffect::setupProcessing(setup);
@@ -134,6 +135,7 @@ void Processor::readParameterChanges(IParameterChanges* changes) {
             case kOutput:   output_ = value; break;
             case kBypass:   bypass_ = value; break;
             case kLowCut80: lowCut_ = value; break;
+            case kMode:     mode_ = value; break;
             default: break;
         }
     }
@@ -164,6 +166,7 @@ void Processor::processBlock(
     finisher_.setLowCut(lowCut_);
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
+    finisher_.setMode(mode_);
 
     for (int32 sample = 0; sample < numSamples; ++sample) {
         const Sample* inputLeft = inputs[0];
@@ -349,10 +352,22 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
         roomDecay_ = room_;
     }
 
+    if (version >= 5) {
+        if (!stream.readDouble(mode_) ||
+            !std::isfinite(mode_)) {
+            return kResultFalse;
+        }
+
+        mode_ = std::clamp(mode_, 0.0, 1.0);
+    } else {
+        mode_ = 0.0;
+    }
+
     finisher_.setFinish(finish_);
     finisher_.setLowCut(lowCut_);
     finisher_.setRoomWet(room_);
     finisher_.setRoomDecay(roomDecay_);
+    finisher_.setMode(mode_);
     finisher_.reset();
     lastBypassed_ = bypass_ >= 0.5;
 
@@ -368,13 +383,14 @@ tresult PLUGIN_API Processor::getState(IBStream* state) {
     if (!stream.writeInt32(kStateVersion))
         return kResultFalse;
 
-    const double values[6] {
+    const double values[7] {
         finish_,
         room_,
         output_,
         bypass_,
         lowCut_,
-        roomDecay_
+        roomDecay_,
+        mode_
     };
 
     for (const double value : values) {

@@ -190,3 +190,31 @@ The following windows were selected from sufficiently active amp material (rough
   - crest 9.41 dB
 
 These timestamps can be used for short, repeatable render comparisons before longer full-song validation.
+
+
+### Expanded Renesans guitar family
+
+After adding GTR 2 Amp and the Pre Rec L/R guitar tracks from all three songs, the Renesans family contains 12 non-DI guitar tracks and 2,508 active one-second windows above -45 dBFS.
+
+Aggregate P10 / P25 / median / P75 / P90:
+
+| Metric | P10 | P25 | Median | P75 | P90 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| RMS dBFS | -35.20 | -33.61 | -31.34 | -27.36 | -25.19 |
+| Crest dB | 9.14 | 11.16 | 12.30 | 13.60 | 15.18 |
+| 20-80 Hz | -39.14 | -34.41 | -24.96 | -20.46 | -14.98 |
+| 80-200 Hz | -10.32 | -6.70 | -4.19 | -2.16 | -1.06 |
+| 200-640 Hz | -14.65 | -12.13 | -9.75 | -7.86 | -6.18 |
+| 640-2500 Hz | -12.16 | -8.65 | -5.52 | -3.49 | -2.27 |
+| 2500-5000 Hz | -15.63 | -12.09 | -9.89 | -8.17 | -6.95 |
+| 5000-10000 Hz | -27.75 | -23.91 | -19.85 | -17.64 | -15.25 |
+| 10000-20000 Hz | -54.69 | -49.63 | -42.54 | -35.30 | -28.69 |
+
+Role medians:
+
+- GTR 1 Amp M81: RMS -26.40 dBFS, crest 12.91 dB
+- GTR 2 Amp M81: RMS -28.15 dBFS, crest 13.60 dB
+- GTR Pre Rec L: RMS -33.30 dBFS, crest 11.45 dB
+- GTR Pre Rec R: RMS -33.44 dBFS, crest 11.54 dB
+
+The pre-recorded guitar pair is significantly more mid-forward and has much less 20-80 Hz energy than the live amp captures. It is therefore useful as a second tonal family inside the same session, but must not be treated as equivalent to the DI/Amp pair.

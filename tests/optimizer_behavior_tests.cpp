@@ -18,6 +18,7 @@ struct Result {
     double maxBodyCut {0.0};
     double minBodySupport {0.0};
     double minArticulationSupport {0.0};
+    double finalArticulationDominance {0.0};
     double maxHarsh {0.0};
     double maxFizz {0.0};
 };
@@ -85,6 +86,9 @@ Result runScenario(
             result.minArticulationSupport,
             dsp.currentArticulationCorrection());
 
+        result.finalArticulationDominance =
+            dsp.currentArticulationDominance();
+
         result.maxHarsh = std::max(
             result.maxHarsh,
             dsp.currentHarshnessReduction());
@@ -130,6 +134,13 @@ int main() {
             0.16,
             0.08,
             false);
+
+    std::cerr
+        << "Articulation-thin measured dominance: "
+        << articulationThin.finalArticulationDominance
+        << ", correction: "
+        << articulationThin.minArticulationSupport
+        << "\n";
 
     HGGF_REQUIRE(
         articulationThin.minArticulationSupport <

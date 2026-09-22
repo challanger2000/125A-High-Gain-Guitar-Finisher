@@ -176,19 +176,19 @@ void MetalFinisherDSP::updateModeTargets() noexcept {
         };
     } else if (mode == 1) {
         modeWeightTargets_ = {
-            1.05,
-            0.85,
-            1.15,
-            0.65,
-            0.70
+            1.10,
+            0.80,
+            1.35,
+            0.55,
+            0.60
         };
     } else {
         modeWeightTargets_ = {
-            0.70,
             0.65,
-            0.45,
-            1.15,
-            1.20
+            0.55,
+            0.30,
+            1.30,
+            1.35
         };
     }
 }

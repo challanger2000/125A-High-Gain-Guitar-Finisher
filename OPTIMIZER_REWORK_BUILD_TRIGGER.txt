@@ -1,2 +1,2 @@
-Optimizer rework verification build 21
-Reason: final bundled robustness verification after making the synthetic balanced-spectrum fixture diagnostic-only. Verify sample-rate consistency, ROOM guitar stress, peak-growth guard, FINISH/modes/auto-level and all existing regressions.
+Optimizer rework verification build 22
+Reason: verify new MASS 0-100% character stage, state version 6, GUI/parameter wiring, exact MASS 0/50/100 interpolation, measured MASS response, FINISH+MASS sample-rate stability, and all existing validator/optimizer/auto-level/ROOM regressions.

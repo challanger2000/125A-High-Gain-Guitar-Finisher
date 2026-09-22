@@ -93,48 +93,84 @@ def read_pcm_wav(path: Path) -> tuple[int, list[float]]:
     return rate, samples
 
 
-def goertzel_energy(samples: list[float], rate: int, frequency: float) -> float:
-    n = len(samples)
-    if n == 0 or frequency <= 0.0 or frequency >= rate * 0.5:
-        return 0.0
+def fft(data: list[complex]) -> None:
+    size = len(data)
 
-    omega = 2.0 * math.pi * frequency / rate
-    coeff = 2.0 * math.cos(omega)
-    s0 = s1 = s2 = 0.0
+    j = 0
+    for i in range(1, size):
+        bit = size >> 1
+        while j & bit:
+            j ^= bit
+            bit >>= 1
+        j ^= bit
+        if i < j:
+            data[i], data[j] = data[j], data[i]
 
-    # Hann window reduces leakage enough for broad-band integration.
-    for i, x in enumerate(samples):
-        if n > 1:
-            win = 0.5 - 0.5 * math.cos(2.0 * math.pi * i / (n - 1))
-        else:
-            win = 1.0
-        s0 = x * win + coeff * s1 - s2
-        s2 = s1
-        s1 = s0
+    length = 2
+    while length <= size:
+        angle = -2.0 * math.pi / length
+        step = complex(math.cos(angle), math.sin(angle))
 
-    power = s1 * s1 + s2 * s2 - coeff * s1 * s2
-    return max(power, 0.0)
+        for start in range(0, size, length):
+            phase = complex(1.0, 0.0)
+            half = length // 2
+            for offset in range(half):
+                even = data[start + offset]
+                odd = data[start + offset + half] * phase
+                data[start + offset] = even + odd
+                data[start + offset + half] = even - odd
+                phase *= step
+
+        length <<= 1
 
 
 def broad_band_energy(samples: list[float], rate: int) -> list[float]:
-    # Log-spaced probes; broad corridor statistics matter more than FFT-bin
-    # exactness here. Keeping this pure Python avoids external dependencies.
-    result: list[float] = []
-    for lo, hi in BANDS:
-        effective_hi = min(hi, rate * 0.49)
-        if effective_hi <= lo:
-            result.append(0.0)
-            continue
+    fft_size = 4096
+    hop = fft_size // 2
+    energies = [0.0 for _ in BANDS]
+    frames = 0
 
-        probes = 24
-        ratio = (effective_hi / lo) ** (1.0 / max(probes - 1, 1))
-        freq = lo
-        energy = 0.0
-        for _ in range(probes):
-            energy += goertzel_energy(samples, rate, freq)
-            freq *= ratio
-        result.append(energy)
-    return result
+    if len(samples) < fft_size:
+        padded = samples + [0.0] * (fft_size - len(samples))
+        frame_starts = [0]
+        source = padded
+    else:
+        frame_starts = range(0, len(samples) - fft_size + 1, hop)
+        source = samples
+
+    window = [
+        0.5 - 0.5 * math.cos(
+            2.0 * math.pi * i / (fft_size - 1))
+        for i in range(fft_size)
+    ]
+
+    for start in frame_starts:
+        spectrum = [
+            complex(source[start + i] * window[i], 0.0)
+            for i in range(fft_size)
+        ]
+        fft(spectrum)
+
+        for bin_index in range(1, fft_size // 2 + 1):
+            frequency = bin_index * rate / fft_size
+            if frequency < 20.0 or frequency > 20000.0:
+                continue
+
+            band_index = None
+            for idx, (lo, hi) in enumerate(BANDS):
+                if lo <= frequency < hi:
+                    band_index = idx
+                    break
+
+            if band_index is not None:
+                energies[band_index] += abs(spectrum[bin_index]) ** 2
+
+        frames += 1
+
+    if frames > 0:
+        energies = [energy / frames for energy in energies]
+
+    return energies
 
 
 def analyse_window(samples: list[float], rate: int) -> dict:

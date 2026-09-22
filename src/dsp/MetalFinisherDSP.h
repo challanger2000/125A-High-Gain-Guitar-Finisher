@@ -73,6 +73,8 @@ public:
 
 private:
     std::array<Biquad, 2> lowCut_ {};
+    std::array<Biquad, 2> levelCoreHighPass_ {};
+    std::array<Biquad, 2> levelCoreLowPass_ {};
 
     AdaptiveBandController lowEnd_ {};
     AdaptiveBandController body_ {};

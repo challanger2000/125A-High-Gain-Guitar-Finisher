@@ -253,6 +253,14 @@ tresult PLUGIN_API Controller::initialize(
         automate,
         kMode);
 
+    parameters.addParameter(
+        STR16("Mass"),
+        STR16("%"),
+        0,
+        0.0,
+        automate,
+        kMass);
+
     return kResultOk;
 }
 
@@ -425,6 +433,11 @@ Controller::createCustomView(
                    "HGGFKnobOutput") == 0) {
 
         tag = kOutput;
+    } else if (std::strcmp(
+                   name,
+                   "HGGFKnobMass") == 0) {
+
+        tag = kMass;
     } else {
         return nullptr;
     }
@@ -505,6 +518,7 @@ Controller::getParamStringByValue(
 
     switch (id) {
         case kFinish:
+        case kMass:
         case kRoom:
         case kRoomDecay:
             copyAscii(
@@ -584,6 +598,7 @@ Controller::getParamValueByString(
     }
 
     if (id == kFinish ||
+        id == kMass ||
         id == kRoom ||
         id == kRoomDecay) {
 
@@ -747,6 +762,27 @@ Controller::setComponentState(
     } else {
         setParamNormalized(
             kMode,
+            0.0);
+    }
+
+    if (version >= 6) {
+        double mass = 0.0;
+
+        if (!stream.readDouble(
+                mass) ||
+            !std::isfinite(mass)) {
+            return kResultFalse;
+        }
+
+        setParamNormalized(
+            kMass,
+            std::clamp(
+                mass,
+                0.0,
+                1.0));
+    } else {
+        setParamNormalized(
+            kMass,
             0.0);
     }
 

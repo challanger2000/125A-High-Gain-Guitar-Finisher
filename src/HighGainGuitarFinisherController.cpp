@@ -245,6 +245,14 @@ tresult PLUGIN_API Controller::initialize(
     parameters.addParameter(
         new LowCutParameter());
 
+    parameters.addParameter(
+        STR16("Mode"),
+        STR16(""),
+        2,
+        0.0,
+        automate,
+        kMode);
+
     return kResultOk;
 }
 
@@ -520,6 +528,16 @@ Controller::getParamStringByValue(
                 string);
             return kResultTrue;
 
+        case kMode:
+            copyAscii(
+                valueNormalized < 0.25
+                    ? "1"
+                    : (valueNormalized < 0.75
+                        ? "2"
+                        : "3"),
+                string);
+            return kResultTrue;
+
         default:
             return EditController::
                 getParamStringByValue(
@@ -537,6 +555,33 @@ Controller::getParamValueByString(
 
     if (!string)
         return kInvalidArgument;
+
+    if (id == kMode) {
+        UString value(
+            string,
+            strlen16(string));
+
+        ParamValue plain = 0.0;
+
+        if (!value.scanFloat(plain))
+            return kResultFalse;
+
+        const int mode =
+            std::clamp(
+                static_cast<int>(
+                    std::llround(plain)),
+                1,
+                3);
+
+        valueNormalized =
+            mode == 1
+                ? 0.0
+                : (mode == 2
+                    ? 0.5
+                    : 1.0);
+
+        return kResultTrue;
+    }
 
     if (id == kFinish ||
         id == kRoom ||
@@ -682,6 +727,27 @@ Controller::setComponentState(
         setParamNormalized(
             kRoomDecay,
             legacyRoom);
+    }
+
+    if (version >= 5) {
+        double mode = 0.0;
+
+        if (!stream.readDouble(
+                mode) ||
+            !std::isfinite(mode)) {
+            return kResultFalse;
+        }
+
+        setParamNormalized(
+            kMode,
+            std::clamp(
+                mode,
+                0.0,
+                1.0));
+    } else {
+        setParamNormalized(
+            kMode,
+            0.0);
     }
 
     return kResultOk;

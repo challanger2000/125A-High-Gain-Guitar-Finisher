@@ -374,3 +374,76 @@ Bass Amp RMS change:
 - 120 Hz: -3.95 dB
 
 This quantitatively supports retaining the full 45-120 Hz manual range. Low settings remove sub-guitar energy with negligible total-level impact on this death-metal reference, while the top of the range intentionally becomes a stronger tonal choice.
+
+
+## Full FINISH-path real-audio validation
+
+The current production algorithms were mirrored offline against the uploaded reference WAVs, including:
+- all five adaptive controllers,
+- current Mode 1/2/3 weights,
+- Auto Level with production attack/release/bootstrap constants,
+- dynamic 80 Hz / 10 kHz edge-protection shelves.
+
+ROOM and LOW CUT were disabled for this validation.
+
+The offline adaptive-controller implementation was first cross-checked against the C++ regression fixtures and reproduced their known extrema exactly:
+- Low 0.55
+- Body 0.40
+- Articulation -0.216162
+- Harsh 0.45
+- Fizz 0.40
+
+This validates the offline telemetry path before using it on real programme audio.
+
+### Bannockburn full-path medians
+
+Across the eight real guitar mic tracks:
+
+Mode 1:
+- RMS delta: about -0.11 dB
+- median sample-peak delta: about -0.13 dB
+- broad-band deltas: +0.77 / -0.18 / -0.42 / +0.36 / -1.09 / -0.94 / +0.20 dB
+
+Mode 2:
+- RMS delta: about -0.08 dB
+- median sample-peak delta: about +0.07 dB
+- broad-band deltas: +0.46 / -0.98 / -0.80 / +0.52 / +0.07 / -1.83 / -0.05 dB
+
+Mode 3:
+- RMS delta: about -0.10 dB
+- median sample-peak delta: about -0.36 dB
+- broad-band deltas: +0.70 / +0.22 / +0.20 / +0.22 / -2.49 / -3.03 / 0.00 dB
+
+Band order:
+20-80 / 80-200 / 200-640 / 640-2500 / 2500-5000 / 5000-10000 / 10000-20000 Hz.
+
+This shows that high internal controller reductions do not translate into equivalent broadband destruction after parallel correction weighting, Auto Level and edge protection.
+
+### Renesans representative-window full-path medians
+
+Across 18 representative one-second measurement windows with several seconds of preceding context:
+
+Mode 1:
+- RMS delta: about -0.42 dB
+- median sample-peak delta: about -0.28 dB
+- bands: +0.47 / -1.72 / +1.14 / +2.76 / -0.83 / -0.74 / +0.25 dB
+
+Mode 2:
+- RMS delta: about -0.24 dB
+- median sample-peak delta: about 0.01 dB
+- bands: +0.33 / -2.00 / +0.99 / +2.90 / +1.09 / -0.84 / +0.05 dB
+
+Mode 3:
+- RMS delta: about -0.31 dB
+- median sample-peak delta: about -0.34 dB
+- bands: +0.52 / -0.82 / +1.04 / +1.80 / -2.38 / -2.50 / -0.04 dB
+
+The short-window RMS variation is expected to be wider than whole-programme matching because Auto Level deliberately uses slow programme energy and must not chase every phrase like a compressor.
+
+### Decision
+
+Do not recalibrate the adaptive-controller thresholds merely because their internal reduction telemetry reaches high values on real guitar.
+
+The complete current Mode/Auto-Level architecture keeps the real reference outputs within controlled, musically plausible changes and preserves peak/crest behaviour well.
+
+Any future controller-threshold change must improve the complete full-path measurements, not just make internal telemetry look smaller.

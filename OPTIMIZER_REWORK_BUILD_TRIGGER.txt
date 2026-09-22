@@ -1,2 +1,2 @@
-Optimizer rework verification build 17
-Reason: verify clearer Mode 1 vs Mode 2 separation, smooth/controlled Mode 3 target, exact FINISH interpolation and global bypass GUI placement.
+Optimizer rework verification build 18
+Reason: verify anti-pumping auto-level regression under alternating palm-mute/sustain programme changes while preserving all existing optimizer, mode, room and FINISH tests.

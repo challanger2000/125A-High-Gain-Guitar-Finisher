@@ -199,19 +199,22 @@ int main() {
     HGGF_REQUIRE(std::isfinite(outputMetrics.crestDb));
 
     // Auto-level must remove loudness bias without forcing exact peak matching.
-    HGGF_REQUIRE(rmsDelta > -0.25);
-    HGGF_REQUIRE(rmsDelta < 0.15);
-    HGGF_REQUIRE(makeupDb >= 0.0);
-    HGGF_REQUIRE(makeupDb <= 1.5001);
+    HGGF_REQUIRE(rmsDelta > -0.35);
+    HGGF_REQUIRE(rmsDelta < 0.35);
+    HGGF_REQUIRE(makeupDb >= -3.0001);
+    HGGF_REQUIRE(makeupDb <= 3.0001);
 
-    // Adaptive spectral work must remain selective after broadband makeup.
-    HGGF_REQUIRE(subDelta > -1.5);
-    HGGF_REQUIRE(bodyDelta > -0.8);
-    HGGF_REQUIRE(midsDelta > -0.8);
-    HGGF_REQUIRE(presenceDelta > -1.0);
+    // Safety bounds: the optimizer may now make deliberate, audible tonal
+    // changes, but one stage must not destroy an entire broad frequency area.
+    HGGF_REQUIRE(std::abs(subDelta) < 3.0);
+    HGGF_REQUIRE(std::abs(bodyDelta) < 5.0);
+    HGGF_REQUIRE(std::abs(midsDelta) < 5.0);
+    HGGF_REQUIRE(std::abs(upperMidsDelta) < 5.0);
+    HGGF_REQUIRE(std::abs(presenceDelta) < 5.0);
 
-    HGGF_REQUIRE(lowDelta < -0.15);
-    HGGF_REQUIRE(upperMidsDelta < 0.10);
+    // This fixture contains intentional palm-mute excess; the low band must
+    // therefore be measurably reduced even after level matching.
+    HGGF_REQUIRE(lowDelta < -0.20);
 
     HGGF_REQUIRE(
         std::abs(

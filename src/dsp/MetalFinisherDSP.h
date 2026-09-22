@@ -19,6 +19,7 @@ public:
     void setLowCut(double normalized) noexcept;
     void setRoomWet(double normalized) noexcept;
     void setRoomDecay(double normalized) noexcept;
+    void setMode(double normalized) noexcept;
 
     void processFrame(double& left, double& right) noexcept;
 
@@ -84,6 +85,11 @@ private:
     double sampleRate_ {44100.0};
     double finish_ {0.0};
 
+    double modeTarget_ {0.0};
+    std::array<double, 5> modeWeights_ {1.0, 1.0, 1.0, 1.0, 1.0};
+    std::array<double, 5> modeWeightTargets_ {1.0, 1.0, 1.0, 1.0, 1.0};
+    double modeSmoothing_ {0.0};
+
     double lowCutTarget_ {0.0};
     double lowCutFrequencyHz_ {kLowCutMinimumHz};
     double lowCutMix_ {0.0};
@@ -92,6 +98,7 @@ private:
     int lowCutCoefficientCountdown_ {0};
 
     void updateLowCutCoefficients() noexcept;
+    void updateModeTargets() noexcept;
 };
 
 } // namespace HighGainGuitarFinisher::dsp

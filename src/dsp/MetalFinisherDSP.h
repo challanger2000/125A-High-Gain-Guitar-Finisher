@@ -34,6 +34,10 @@ public:
         return articulation_.currentReduction();
     }
 
+    double currentArticulationDominance() const noexcept {
+        return articulation_.currentDominance();
+    }
+
     double currentHarshnessReduction() const noexcept {
         return harshness_.currentReduction();
     }

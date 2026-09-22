@@ -8,9 +8,9 @@ It is deliberately independent from FINISH.
 
 The full 100% MASS curve is:
 
-- broad boost: 140 Hz, +1.75 dB, Q 1.20
-- broad cleanup: 220 Hz, -1.75 dB, Q 1.00
-- fixed full-stage trim: -0.10 dB
+- broad boost: 140 Hz, +10.50 dB, Q 1.20
+- broad cleanup: 220 Hz, -10.50 dB, Q 1.00
+- fixed full-stage trim: -0.60 dB
 
 The stage is inserted after the FINISH optimizer and before ROOM.
 
@@ -41,14 +41,22 @@ The candidate family was evaluated against two real multitrack reference familie
 - Renesans — real Guitar DI / Amp captures
 - Cnoc An Tursa — Bannockburn — four Guitar DI performances with two cabinet/mic captures each
 
-The chosen conservative curve was preferred over more aggressive candidates because it remains useful across both families without relying strongly on loudness bias.
+The first conservative range was rejected in listening because even 100% remained too subtle. The design goal was therefore changed deliberately: the user must be able to choose subtle processing at low settings and intentionally overdo the effect at high settings.
 
-The intended 100% spectral direction is:
+On the user's real guitar render, the expanded linear range measures approximately:
 
-- modest 80-200 Hz foundation increase
-- moderate 200-640 Hz cleanup
-- very small change above the low-mid region
-- negligible overall loudness bias
+- 25%: +0.66 dB in 80-200 Hz / -1.06 dB in 200-640 Hz
+- 50%: +1.42 dB / -2.23 dB
+- 75%: +2.22 dB / -3.51 dB
+- 100%: +3.02 dB / -4.87 dB
+
+The intended control philosophy is therefore:
+
+- low settings = subtle weight/cleanup
+- middle settings = clearly audible shaping
+- high settings = deliberately strong and optionally exaggerated
+- 0% remains exact bypass of the MASS stage
+- the control remains sample-linear between dry and the full 100% curve
 
 ## Production guardrails
 
@@ -63,7 +71,7 @@ MASS must keep the following properties:
 - stable operation from 44.1 to 192 kHz
 - ROOM receives the already MASS-shaped guitar signal
 
-A stronger MASS curve should only replace this design if real-programme measurements show a clear improvement without increased loudness bias or excessive sub energy.
+The range is intentionally not capped at a permanently conservative sound. The user chooses the amount. Safety requirements apply to numerical stability, peak growth and reproducibility, not to preventing strong tonal choices.
 
 
 ## Full FINISH + MASS real-audio validation

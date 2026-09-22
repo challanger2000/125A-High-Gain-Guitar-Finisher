@@ -1,2 +1,2 @@
-Optimizer rework verification build 6
-Reason: verify calibrated articulation support and steady-state multi-zone behavior.
+Optimizer rework verification build 7
+Reason: run calibrated optimizer with Steinberg VST3 validator enabled.

@@ -297,9 +297,19 @@
           text-alignment="center"
           mouse-enabled="false"/>
 
+    <view class="CTextLabel"
+          origin="585,72"
+          size="130,12"
+          title="PLUGIN"
+          transparent="true"
+          font-color="Muted"
+          font="MinorFont"
+          text-alignment="center"
+          mouse-enabled="false"/>
+
     <view class="CSegmentButton"
-          origin="512,337"
-          size="180,34"
+          origin="585,86"
+          size="130,28"
           control-tag="103"
           style="horizontal"
           segment-names="ACTIVE,BYPASS"
@@ -310,11 +320,11 @@
           gradient-highlighted="SwitchSelected"
           frame-color="SwitchFrame"
           frame-width="1"
-          round-radius="17"/>
+          round-radius="14"/>
 
     <view class="CTextLabel"
-          origin="534,376"
-          size="136,14"
+          origin="286,89"
+          size="190,12"
           title="ZERO LOOKAHEAD LATENCY"
           transparent="true"
           font-color="Minor"

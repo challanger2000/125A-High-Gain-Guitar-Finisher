@@ -16,6 +16,7 @@ public:
     void reset() noexcept;
 
     void setFinish(double normalized) noexcept;
+    void setMass(double normalized) noexcept;
     void setLowCut(double normalized) noexcept;
     void setRoomWet(double normalized) noexcept;
     void setRoomDecay(double normalized) noexcept;
@@ -75,6 +76,8 @@ private:
     std::array<Biquad, 2> lowCut_ {};
     std::array<Biquad, 2> makeupLowShelf_ {};
     std::array<Biquad, 2> makeupHighShelf_ {};
+    std::array<Biquad, 2> massBoost_ {};
+    std::array<Biquad, 2> massCleanup_ {};
 
     AdaptiveBandController lowEnd_ {};
     AdaptiveBandController body_ {};
@@ -86,6 +89,7 @@ private:
 
     double sampleRate_ {44100.0};
     double finish_ {0.0};
+    double mass_ {0.0};
 
     double modeTarget_ {0.0};
     std::array<double, 5> modeWeights_ {1.0, 1.0, 1.0, 1.0, 1.0};

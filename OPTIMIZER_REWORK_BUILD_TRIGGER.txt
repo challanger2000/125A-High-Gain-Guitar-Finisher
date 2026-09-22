@@ -1,2 +1,2 @@
-Optimizer rework verification build 8
-Reason: verify three measured optimizer modes, VST3 state compatibility and GUI selector.
+Optimizer rework verification build 9
+Reason: verify stronger audible separation between three optimizer modes.

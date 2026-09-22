@@ -225,13 +225,27 @@ void AdaptiveBandController::processFrame(
         (wideSlowEnergy_ + kEpsilon));
 
     if (mode_ == AdaptiveBandMode::BodyResonance) {
-        const double excess =
+        const double resonanceExcess =
             dominance > 0.080
                 ? std::clamp(
                     (peakiness - 1.12) / 1.00,
                     0.0,
                     1.0)
                 : 0.0;
+
+        // A guitar can be boxy/body-heavy without one narrow resonance
+        // dominating the four candidates. Treat sustained broad dominance
+        // as a second, independent reason to reduce this zone.
+        const double broadExcess =
+            std::clamp(
+                (dominance - 0.16) / 0.18,
+                0.0,
+                1.0);
+
+        const double excess =
+            std::max(
+                resonanceExcess,
+                broadExcess);
 
         const double deficit = std::clamp(
             (0.105 - dominance) / 0.060,

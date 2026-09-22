@@ -1,1 +1,2 @@
-Optimizer rework verification build 2\nReason: verify broad-body detection fix.\n
+Optimizer rework verification build 3
+Reason: verify parallel five-zone optimizer, bidirectional level match, stronger room ducking and updated metrology.

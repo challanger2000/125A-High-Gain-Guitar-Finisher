@@ -73,10 +73,8 @@ public:
 
 private:
     std::array<Biquad, 2> lowCut_ {};
-    std::array<Biquad, 2> protectSubDry_ {};
-    std::array<Biquad, 2> protectSubWet_ {};
-    std::array<Biquad, 2> protectAirDry_ {};
-    std::array<Biquad, 2> protectAirWet_ {};
+    std::array<Biquad, 2> makeupLowShelf_ {};
+    std::array<Biquad, 2> makeupHighShelf_ {};
 
     AdaptiveBandController lowEnd_ {};
     AdaptiveBandController body_ {};
@@ -100,8 +98,10 @@ private:
     double lowCutMixSmoothing_ {0.0};
     double lowCutFrequencySmoothing_ {0.0};
     int lowCutCoefficientCountdown_ {0};
+    int makeupShelfCoefficientCountdown_ {0};
 
     void updateLowCutCoefficients() noexcept;
+    void updateMakeupShelfCoefficients() noexcept;
     void updateModeTargets() noexcept;
 };
 

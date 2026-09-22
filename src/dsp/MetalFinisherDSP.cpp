@@ -200,38 +200,61 @@ void MetalFinisherDSP::processFrame(
     double processedRight = baseRight;
 
     if (finish_ > 0.0) {
-        double finishLeft = baseLeft;
-        double finishRight = baseRight;
+        // Each optimizer zone analyses the same pre-optimizer signal.
+        // This avoids order-dependent decisions (for example a body cut
+        // changing what the harshness detector sees).
+        double lowLeft = baseLeft;
+        double lowRight = baseRight;
+        double bodyLeft = baseLeft;
+        double bodyRight = baseRight;
+        double articulationLeft = baseLeft;
+        double articulationRight = baseRight;
+        double harshLeft = baseLeft;
+        double harshRight = baseRight;
+        double fizzLeft = baseLeft;
+        double fizzRight = baseRight;
 
         lowEnd_.processFrame(
-            finishLeft,
-            finishRight);
+            lowLeft,
+            lowRight);
 
         body_.processFrame(
-            finishLeft,
-            finishRight);
+            bodyLeft,
+            bodyRight);
 
         articulation_.processFrame(
-            finishLeft,
-            finishRight);
+            articulationLeft,
+            articulationRight);
 
         harshness_.processFrame(
-            finishLeft,
-            finishRight);
+            harshLeft,
+            harshRight);
 
         fizz_.processFrame(
-            finishLeft,
-            finishRight);
+            fizzLeft,
+            fizzRight);
+
+        const double correctionLeft =
+            (lowLeft - baseLeft) +
+            (bodyLeft - baseLeft) +
+            (articulationLeft - baseLeft) +
+            (harshLeft - baseLeft) +
+            (fizzLeft - baseLeft);
+
+        const double correctionRight =
+            (lowRight - baseRight) +
+            (bodyRight - baseRight) +
+            (articulationRight - baseRight) +
+            (harshRight - baseRight) +
+            (fizzRight - baseRight);
 
         processedLeft =
             baseLeft +
-            (finishLeft - baseLeft) *
-                finish_;
+            correctionLeft * finish_;
 
         processedRight =
             baseRight +
-            (finishRight - baseRight) *
-                finish_;
+            correctionRight * finish_;
 
         autoLevel_.processFrame(
             baseLeft,

@@ -49,6 +49,24 @@ void MetalFinisherDSP::prepare(double sampleRate) {
         {6000.0, 7500.0, 9000.0, 11000.0},
         1.0);
 
+    const auto levelHighPass =
+        makeHighPass(
+            sampleRate_,
+            70.0,
+            0.7071067811865476);
+
+    const auto levelLowPass =
+        makeLowPass(
+            sampleRate_,
+            11000.0,
+            0.7071067811865476);
+
+    for (auto& filter : levelCoreHighPass_)
+        filter.setCoefficients(levelHighPass);
+
+    for (auto& filter : levelCoreLowPass_)
+        filter.setCoefficients(levelLowPass);
+
     autoLevel_.prepare(sampleRate_);
     room_.prepare(sampleRate_);
 
@@ -58,6 +76,12 @@ void MetalFinisherDSP::prepare(double sampleRate) {
 
 void MetalFinisherDSP::reset() noexcept {
     for (auto& filter : lowCut_)
+        filter.reset();
+
+    for (auto& filter : levelCoreHighPass_)
+        filter.reset();
+
+    for (auto& filter : levelCoreLowPass_)
         filter.reset();
 
     lowEnd_.reset();
@@ -313,19 +337,56 @@ void MetalFinisherDSP::processFrame(
             modeWeights_[3] * (harshRight - baseRight) +
             modeWeights_[4] * (fizzRight - baseRight);
 
+        const double correctionDeltaLeft =
+            correctionLeft * finish_;
+
+        const double correctionDeltaRight =
+            correctionRight * finish_;
+
+        const double coreBaseLeft =
+            levelCoreLowPass_[0].process(
+                levelCoreHighPass_[0].process(
+                    baseLeft));
+
+        const double coreBaseRight =
+            levelCoreLowPass_[1].process(
+                levelCoreHighPass_[1].process(
+                    baseRight));
+
+        // Learn and apply loudness compensation only inside the useful
+        // high-gain guitar band. Sub-bass and extreme air remain dry residuals
+        // instead of being raised merely because the optimizer cut energy in
+        // the mids or fizz region.
+        double measuredCoreLeft =
+            coreBaseLeft +
+            correctionDeltaLeft;
+
+        double measuredCoreRight =
+            coreBaseRight +
+            correctionDeltaRight;
+
+        autoLevel_.processFrame(
+            coreBaseLeft,
+            coreBaseRight,
+            measuredCoreLeft,
+            measuredCoreRight);
+
+        const double levelGain =
+            autoLevel_.currentGain();
+
         processedLeft =
             baseLeft +
-            correctionLeft * finish_;
+            (levelGain - 1.0) *
+                coreBaseLeft +
+            levelGain *
+                correctionDeltaLeft;
 
         processedRight =
             baseRight +
-            correctionRight * finish_;
-
-        autoLevel_.processFrame(
-            baseLeft,
-            baseRight,
-            processedLeft,
-            processedRight);
+            (levelGain - 1.0) *
+                coreBaseRight +
+            levelGain *
+                correctionDeltaRight;
     } else {
         autoLevel_.reset();
     }

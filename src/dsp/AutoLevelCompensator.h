@@ -33,6 +33,10 @@ private:
     double activityReleaseCoefficient_ {0.0};
     double gainUpCoefficient_ {0.0};
     double gainDownCoefficient_ {0.0};
+    double bootstrapCoefficient_ {0.0};
+
+    int bootstrapSamplesRemaining_ {0};
+    int bootstrapLengthSamples_ {0};
 
     double minGain_ {1.0};
     double maxGain_ {1.0};

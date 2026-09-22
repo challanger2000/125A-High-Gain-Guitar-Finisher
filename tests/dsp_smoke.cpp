@@ -161,6 +161,133 @@ void verifyLinearFinishAmount() {
     }
 }
 
+double measureMassGain(
+    double probeFrequency) {
+
+    constexpr int warmup = 24000;
+    constexpr int measured = 48000;
+
+    MetalFinisherDSP dsp;
+    dsp.prepare(sampleRate);
+    dsp.setFinish(0.0);
+    dsp.setMass(1.0);
+    dsp.setLowCut(0.0);
+
+    double inputPower = 0.0;
+    double outputPower = 0.0;
+
+    for (int i = 0; i < warmup + measured; ++i) {
+        const double x =
+            std::sin(
+                2.0 * pi *
+                probeFrequency *
+                i /
+                sampleRate);
+
+        double left = x;
+        double right = x;
+
+        dsp.processFrame(left, right);
+
+        HGGF_REQUIRE(std::isfinite(left));
+        HGGF_REQUIRE(std::isfinite(right));
+
+        if (i >= warmup) {
+            inputPower += x * x;
+            outputPower += left * left;
+        }
+    }
+
+    return std::sqrt(
+        outputPower /
+        inputPower);
+}
+
+void verifyLinearMassAmount() {
+    MetalFinisherDSP dry;
+    MetalFinisherDSP half;
+    MetalFinisherDSP full;
+
+    dry.prepare(sampleRate);
+    half.prepare(sampleRate);
+    full.prepare(sampleRate);
+
+    dry.setFinish(0.0);
+    half.setFinish(0.0);
+    full.setFinish(0.0);
+
+    dry.setMass(0.0);
+    half.setMass(0.5);
+    full.setMass(1.0);
+
+    for (int i = 0;
+         i < static_cast<int>(
+             sampleRate * 2.0);
+         ++i) {
+
+        const double time =
+            static_cast<double>(i) /
+            sampleRate;
+
+        const double inputLeft =
+            0.35 * std::sin(
+                2.0 * pi * 120.0 * time) +
+            0.25 * std::sin(
+                2.0 * pi * 250.0 * time) +
+            0.20 * std::sin(
+                2.0 * pi * 1200.0 * time);
+
+        const double inputRight =
+            0.97 * inputLeft +
+            0.03 * std::sin(
+                2.0 * pi * 310.0 * time);
+
+        double dryLeft = inputLeft;
+        double dryRight = inputRight;
+        double halfLeft = inputLeft;
+        double halfRight = inputRight;
+        double fullLeft = inputLeft;
+        double fullRight = inputRight;
+
+        dry.processFrame(
+            dryLeft,
+            dryRight);
+
+        half.processFrame(
+            halfLeft,
+            halfRight);
+
+        full.processFrame(
+            fullLeft,
+            fullRight);
+
+        HGGF_REQUIRE(dryLeft == inputLeft);
+        HGGF_REQUIRE(dryRight == inputRight);
+
+        const double expectedHalfLeft =
+            dryLeft +
+            0.5 *
+                (fullLeft - dryLeft);
+
+        const double expectedHalfRight =
+            dryRight +
+            0.5 *
+                (fullRight - dryRight);
+
+        HGGF_REQUIRE(
+            std::abs(
+                halfLeft -
+                expectedHalfLeft) <
+            1.0e-12);
+
+        HGGF_REQUIRE(
+            std::abs(
+                halfRight -
+                expectedHalfRight) <
+            1.0e-12);
+    }
+}
+
 void verifyFinishReenableStartsClean() {
     MetalFinisherDSP reused;
     reused.prepare(sampleRate);
@@ -254,6 +381,7 @@ void verifyFiniteAcrossSampleRates() {
 int main() {
     verifyExactTransparency();
     verifyLinearFinishAmount();
+    verifyLinearMassAmount();
     verifyFinishReenableStartsClean();
     verifyFiniteAcrossSampleRates();
 
@@ -280,9 +408,43 @@ int main() {
     HGGF_REQUIRE(lowCut80At1000 > 0.99);
     HGGF_REQUIRE(lowCut80At1000 < 1.01);
 
+    const double massAt140 =
+        measureMassGain(140.0);
+
+    const double massAt220 =
+        measureMassGain(220.0);
+
+    const double massAt280 =
+        measureMassGain(280.0);
+
+    const double massAt1000 =
+        measureMassGain(1000.0);
+
+    HGGF_REQUIRE(
+        massAt140 > 1.05 &&
+        massAt140 < 1.12);
+
+    HGGF_REQUIRE(
+        massAt220 > 0.84 &&
+        massAt220 < 0.93);
+
+    HGGF_REQUIRE(
+        massAt280 > 0.84 &&
+        massAt280 < 0.93);
+
+    HGGF_REQUIRE(
+        massAt1000 > 0.96 &&
+        massAt1000 < 1.00);
+
     std::cout
         << "DSP smoke test passed\n"
         << "FINISH 0/50/100 linear amount law passed for all modes\n"
+        << "MASS 0/50/100 linear amount law passed\n"
+        << "MASS gain at 140/220/280/1000 Hz: "
+        << massAt140 << " / "
+        << massAt220 << " / "
+        << massAt280 << " / "
+        << massAt1000 << "\n"
         << "Low Cut gain at cutoff 45/80/120 Hz: "
         << cutoff45 << " / "
         << cutoff80 << " / "

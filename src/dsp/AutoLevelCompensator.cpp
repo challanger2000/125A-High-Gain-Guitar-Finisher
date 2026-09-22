@@ -47,8 +47,11 @@ void AutoLevelCompensator::prepare(
     gainDownCoefficient_ =
         timeCoefficient(sampleRate_, 250.0);
 
+    minGain_ =
+        std::pow(10.0, -3.0 / 20.0);
+
     maxGain_ =
-        std::pow(10.0, 1.5 / 20.0);
+        std::pow(10.0, 3.0 / 20.0);
 
     // Do not chase amp hiss or numerical residue during silence.
     gateEnergy_ =
@@ -114,11 +117,11 @@ void AutoLevelCompensator::processFrame(
             (inputEnergy_ + kEpsilon) /
             (outputEnergy_ + kEpsilon));
 
-        // FINISH is primarily subtractive. Auto-level only restores measured
-        // loss; it never attenuates a source that happens to become louder.
+        // Optimizer processing may cut or boost. Level matching must therefore
+        // work in both directions so louder processing is not rewarded in A/B.
         targetGain = std::clamp(
             ratio,
-            1.0,
+            minGain_,
             maxGain_);
     } else {
         // A genuine pause starts a fresh programme estimate for the next

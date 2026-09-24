@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 using HighGainGuitarFinisher::automation::linearValueAtSample;
 

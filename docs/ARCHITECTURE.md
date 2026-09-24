@@ -2,97 +2,145 @@
 
 ## Current signal path
 
-Stereo In -> optional 80 Hz Low Cut -> adaptive FINISH -> bounded Auto Level -> ROOM -> OUTPUT -> Stereo Out
+Stereo In -> optional continuous Low Cut -> adaptive FINISH -> bounded Auto Level / edge protection -> MASS -> ROOM -> OUTPUT -> Stereo Out
 
 BYPASS skips intentional processing and output trim so bypass remains unity.
 
 ## Adaptive FINISH
 
-FINISH uses three stereo-linked adaptive search banks:
+FINISH uses five stereo-linked adaptive analysis/correction zones:
 
-- low/palm-mute region: approximately 85, 110, 145 and 180 Hz,
-- body resonance region: approximately 220, 300, 390 and 500 Hz,
-- harshness region: approximately 3.2, 4.2, 5.4 and 6.8 kHz.
+- low / palm-mute control: approximately 85, 110, 145 and 180 Hz;
+- body resonance: approximately 220, 300, 390 and 500 Hz;
+- articulation support: approximately 800, 1200, 1750 and 2400 Hz;
+- harshness: approximately 2.8, 3.6, 4.5 and 5.6 kHz;
+- fizz: approximately 6.0, 7.5, 9.0 and 11.0 kHz.
 
-The search frequencies are analysis anchors, not a universal target EQ.
+The frequencies are analysis anchors, not a universal target EQ. The adaptive controllers are stereo linked so image movement is not created by independent left/right decisions.
+
+The complete 100% FINISH result is built first. The FINISH control then interpolates between the Low-Cut output and that complete result. This keeps 0% exact and makes 50% mathematically halfway to the full processing result.
+
+## Modes
+
+MODE changes the relative authority of the five adaptive zones while preserving the same underlying architecture:
+
+1. Open / Balanced
+2. Bite / Industrial
+3. Smooth / Controlled
+
+Mode weights are smoothed to avoid abrupt DSP jumps.
 
 ## Auto Level
 
-Auto Level compares broadband energy immediately before and after FINISH.
+Auto Level compares broadband programme energy immediately before and after the full adaptive FINISH correction.
 
-Safeguards:
+Current safeguards:
 
-- slow programme-energy tracking,
-- slow makeup rise,
-- faster return toward unity,
-- maximum makeup +1.5 dB,
-- no negative makeup,
-- silence reset,
-- exact unity reset at FINISH = 0.
+- slow programme-energy tracking;
+- quicker phrase bootstrap after silence;
+- slower gain rise and faster return;
+- compensation bounded to +/-3 dB;
+- bidirectional compensation so louder processing is not rewarded in A/B;
+- silence gate and programme reset;
+- exact unity reset when FINISH returns to 0%.
 
-The optional 80 Hz low cut is outside the compensation comparison and is therefore never undone.
+Low Cut is outside the compensation comparison and is therefore never undone.
+
+## MASS
+
+MASS is a separate zero-latency linear character stage after FINISH and before ROOM.
+
+The current full MASS path combines:
+
+- a broad 140 Hz weight boost;
+- nearby 220 Hz low-mid cleanup;
+- a small fixed full-stage trim.
+
+The full curve is calculated first and the public MASS control linearly interpolates between dry and full processing. Therefore MASS 0% is exact neutral and 50% is sample-exactly halfway to 100%.
+
+See MASS_DESIGN.md for the measured reference rationale.
+
+## LOW CUT
+
+LOW CUT is continuously adjustable from 45 to 120 Hz with a true Off state. Frequency and engage/disengage transitions are smoothed. Filter coefficients are updated at bounded intervals in the audio path; no allocation is performed.
 
 ## ROOM architecture
 
-ROOM is intentionally a short industrial guitar ambience rather than a general-purpose reverb.
+ROOM is a dedicated high-gain-guitar ambience rather than a general-purpose reverb.
 
 ### Early reflections
 
-Four asymmetric stereo reflection taps start around 11-13 ms and extend to roughly 41 ms.
+Six asymmetric reflection taps per side begin at approximately 15.7 ms on the left and 18.1 ms on the right and extend to approximately 79-85 ms.
 
-Cross-channel taps and alternating polarity increase density without making the first reflections sound like a simple slap delay.
+Cross-channel taps and alternating polarity increase density without reducing the effect to a single slap delay.
 
 ### Late field
 
 A four-line feedback delay network uses approximately:
 
-- 47.9 ms,
-- 59.3 ms,
-- 71.1 ms,
-- 83.7 ms.
+- 71.3 ms;
+- 89.9 ms;
+- 113.7 ms;
+- 139.3 ms.
 
 A normalized Hadamard-style feedback matrix diffuses energy between the four lines.
 
-ROOM changes the feedback from roughly 0.48 toward 0.66 as the macro increases. This keeps low ROOM values tight and lets the maximum setting bloom without becoming a long ambient reverb.
+DECAY is independent of wet level and maps the feedback approximately from 0.50 to 0.88 using a shaped control law.
 
 ### Wet-path tone
 
-The room input is high-passed around 180 Hz so palm-mute and bass energy do not accumulate in the tail.
-
-The feedback network is damped around 5.2 kHz and the final wet signal is low-passed around 6.2 kHz.
+The room input is high-passed around 200 Hz. The feedback network is damped around 5.2 kHz, and the final wet output is low-passed around 6 kHz. A restrained 2.1 kHz metallic band component increases with DECAY.
 
 ### Stereo and mono behaviour
 
-The wet signal is converted to mid/side internally and the side component is limited to 72% of its raw value.
-
-This preserves decorrelation while retaining useful mono energy.
+The wet field is converted to mid/side internally and side is constrained rather than maximized. Dedicated metrology guards stereo correlation and mono energy.
 
 ### Ducking
 
-A fast-attack, slower-release envelope follows the processed guitar.
+A fast-attack, slower-release envelope follows the processed guitar. Strong events can reduce room gain so the ambience remains behind pick and palm-mute attacks and recovers into gaps.
 
-Strong guitar events can reduce the wet path by up to roughly 42%. The reverb therefore stays behind the pick attack and blooms into the spaces between notes.
+### WET and DECAY
 
-### ROOM macro
+WET controls wet amount and DECAY independently controls tail behaviour. WET = 0 converges to exact zero wet output and clears tail state.
 
-ROOM simultaneously controls wet level and tail density.
+ROOM follows FINISH, Auto Level and MASS, so the FINISH loudness compensator does not attempt to cancel intended ambience.
 
-Maximum nominal wet gain is 0.22 before ducking. ROOM = 0 returns exactly zero wet signal and eventually clears the tail state.
+## VST3 automation
 
-ROOM is placed after FINISH and Auto Level, so the FINISH loudness compensator does not attempt to cancel the intended ambience.
+Public parameter IDs remain stable.
+
+The processor consumes every valid VST3 parameter-queue point at its supplied sample offset inside the current process block. It does not collapse automation to the last point of the block.
+
+No heap allocation is introduced by automation processing; a fixed-size cursor array is used for the known public parameters.
 
 ## State and lifecycle
 
-ROOM already existed as a serialized public parameter, so implementing its DSP requires no state-version change.
+Current serialized processor state version: 6.
 
-DSP state is reset on host activation, processing restart, state load and bypass transitions.
+Older supported states are migrated deliberately:
 
-## Real-time rules
+- legacy Low Cut Boolean states map to the compatible 80 Hz position;
+- older ROOM states seed DECAY where required;
+- MODE and MASS default safely when absent.
 
-The audio callback performs no file access, logging or locking.
+DSP state is reset on activation, processing restart, state load and bypass transitions.
 
-ROOM delay buffers are allocated during prepare, never during sample processing.
+## Numerical and realtime safety
+
+The audio path performs no file/network I/O, logging or blocking locks and allocates no delay memory during process().
+
+Numerical safeguards include:
+
+- non-finite input sanitization;
+- emergency bounding of absurd finite input magnitudes far above the intended audio range;
+- bounded detector-energy accumulation;
+- non-finite biquad-state recovery;
+- explicit collapse of numerically irrelevant biquad states below the subnormal-risk region.
+
+These guards are failure containment, not normal-range tone shaping.
 
 ## Validation
 
-Release-build tests now use explicit runtime checks rather than C assert, so guard failures remain active even when NDEBUG is defined.
+Release-build tests use explicit runtime checks rather than C assert, so measurement failures remain active with NDEBUG.
+
+Current deterministic QA includes transparency, FINISH/MASS amount-law checks, adaptive fixtures, Auto Level behaviour, ROOM metrology, sample-rate coverage, impulse/latency checks and pathological-input recovery.

@@ -93,7 +93,7 @@ tresult PLUGIN_API Processor::setProcessing(TBool state) {
 }
 
 void Processor::applyParameterValue(
-    ParamID id,
+    Steinberg::Vst::ParamID id,
     ParamValue value) noexcept {
 
     if (!std::isfinite(value))
@@ -164,7 +164,7 @@ void Processor::initializeAutomationCursors(
             continue;
         }
 
-        const ParamID id =
+        const Steinberg::Vst::ParamID id =
             queue->getParameterId();
 
         switch (id) {

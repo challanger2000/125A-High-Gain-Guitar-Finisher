@@ -87,7 +87,7 @@ private:
     void syncDSPParameters() noexcept;
 
     template <typename Sample>
-    void processBlock(
+    Steinberg::uint64 processBlock(
         Sample** inputs,
         Sample** outputs,
         Steinberg::int32 numSamples,

@@ -422,7 +422,7 @@ void Processor::syncDSPParameters() noexcept {
 }
 
 template <typename Sample>
-void Processor::processBlock(
+uint64 Processor::processBlock(
     Sample** inputs,
     Sample** outputs,
     int32 numSamples,
@@ -477,6 +477,9 @@ void Processor::processBlock(
         outputs && numChannels > 1
             ? outputs[1]
             : nullptr;
+
+    bool leftSilent = true;
+    bool rightSilent = true;
 
     for (int32 sample = 0;
          sample < numSamples;
@@ -605,11 +608,33 @@ void Processor::processBlock(
         outputLeft[sample] =
             static_cast<Sample>(left);
 
+        if (outputLeft[sample] !=
+            static_cast<Sample>(0)) {
+            leftSilent = false;
+        }
+
         if (outputRight) {
             outputRight[sample] =
                 static_cast<Sample>(right);
+
+            if (outputRight[sample] !=
+                static_cast<Sample>(0)) {
+                rightSilent = false;
+            }
         }
     }
+
+    uint64 silenceFlags = 0;
+
+    if (leftSilent)
+        silenceFlags |= uint64 {1};
+
+    if (numChannels > 1 &&
+        rightSilent) {
+        silenceFlags |= uint64 {2};
+    }
+
+    return silenceFlags;
 }
 
 tresult PLUGIN_API Processor::process(ProcessData& data) {
@@ -657,74 +682,30 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
         return kResultOk;
     }
 
+    uint64 silenceFlags = 0;
+
     if (data.symbolicSampleSize == kSample32) {
-        processBlock(
-            data.inputs[0].channelBuffers32,
-            data.outputs[0].channelBuffers32,
-            data.numSamples,
-            numChannels,
-            data.inputParameterChanges);
+        silenceFlags =
+            processBlock(
+                data.inputs[0].channelBuffers32,
+                data.outputs[0].channelBuffers32,
+                data.numSamples,
+                numChannels,
+                data.inputParameterChanges);
     } else if (data.symbolicSampleSize == kSample64) {
-        processBlock(
-            data.inputs[0].channelBuffers64,
-            data.outputs[0].channelBuffers64,
-            data.numSamples,
-            numChannels,
-            data.inputParameterChanges);
+        silenceFlags =
+            processBlock(
+                data.inputs[0].channelBuffers64,
+                data.outputs[0].channelBuffers64,
+                data.numSamples,
+                numChannels,
+                data.inputParameterChanges);
     } else {
         return kResultFalse;
     }
 
-    bool silent = true;
-
-    if (data.symbolicSampleSize == kSample32) {
-        for (int32 channel = 0;
-             channel < numChannels && silent;
-             ++channel) {
-
-            const auto* output =
-                data.outputs[0].channelBuffers32[channel];
-
-            if (!output)
-                continue;
-
-            for (int32 sample = 0;
-                 sample < data.numSamples;
-                 ++sample) {
-
-                if (output[sample] != 0.0f) {
-                    silent = false;
-                    break;
-                }
-            }
-        }
-    } else {
-        for (int32 channel = 0;
-             channel < numChannels && silent;
-             ++channel) {
-
-            const auto* output =
-                data.outputs[0].channelBuffers64[channel];
-
-            if (!output)
-                continue;
-
-            for (int32 sample = 0;
-                 sample < data.numSamples;
-                 ++sample) {
-
-                if (output[sample] != 0.0) {
-                    silent = false;
-                    break;
-                }
-            }
-        }
-    }
-
-    data.outputs[0].silenceFlags = silent
-        ? ((Steinberg::uint64 {1} <<
-            numChannels) - 1)
-        : 0;
+    data.outputs[0].silenceFlags =
+        silenceFlags;
 
     return kResultOk;
 }

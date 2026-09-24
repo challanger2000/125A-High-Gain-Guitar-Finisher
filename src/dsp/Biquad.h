@@ -25,9 +25,46 @@ public:
     }
 
     double process(double input) noexcept {
-        const double output = c_.b0 * input + z1_;
-        z1_ = c_.b1 * input - c_.a1 * output + z2_;
-        z2_ = c_.b2 * input - c_.a2 * output;
+        if (!std::isfinite(input))
+            input = 0.0;
+
+        const double output =
+            c_.b0 * input + z1_;
+
+        if (!std::isfinite(output)) {
+            reset();
+            return 0.0;
+        }
+
+        double nextZ1 =
+            c_.b1 * input -
+            c_.a1 * output +
+            z2_;
+
+        double nextZ2 =
+            c_.b2 * input -
+            c_.a2 * output;
+
+        if (!std::isfinite(nextZ1) ||
+            !std::isfinite(nextZ2)) {
+            reset();
+            return 0.0;
+        }
+
+        // Explicitly collapse numerically irrelevant residual state so filter
+        // tails cannot enter the subnormal range and create callback spikes.
+        constexpr double kStateFloor = 1.0e-30;
+
+        z1_ =
+            std::abs(nextZ1) < kStateFloor
+                ? 0.0
+                : nextZ1;
+
+        z2_ =
+            std::abs(nextZ2) < kStateFloor
+                ? 0.0
+                : nextZ2;
+
         return output;
     }
 

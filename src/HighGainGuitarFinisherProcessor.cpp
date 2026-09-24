@@ -1,6 +1,7 @@
 #include "HighGainGuitarFinisherProcessor.h"
 #include "HighGainGuitarFinisherIDs.h"
 #include "dsp/LowCutMapping.h"
+#include "AutomationMath.h"
 
 #include "base/source/fstreamer.h"
 #include "pluginterfaces/vst/vstspeaker.h"
@@ -349,21 +350,13 @@ bool Processor::applyAutomationAtSample(
         if (span <= 0)
             continue;
 
-        const double fraction =
-            std::clamp(
-                static_cast<double>(
-                    sampleOffset -
-                    cursor.segmentStartOffset) /
-                    static_cast<double>(
-                        span),
-                0.0,
-                1.0);
-
         const ParamValue value =
-            cursor.segmentStartValue +
-            fraction *
-                (cursor.nextValue -
-                 cursor.segmentStartValue);
+            automation::linearValueAtSample(
+                sampleOffset,
+                cursor.segmentStartOffset,
+                cursor.segmentStartValue,
+                cursor.nextSampleOffset,
+                cursor.nextValue);
 
         applyParameterValue(
             cursor.id,

@@ -40,31 +40,62 @@ double percentile(
     return sorted[index];
 }
 
-double measureTimerOverheadNs() {
-    constexpr int iterations = 100000;
+double measureTimerCallOverheadNs() {
+    constexpr int batches = 256;
+    constexpr int callsPerBatch = 1024;
 
     std::vector<double> samples;
-    samples.reserve(iterations);
+    samples.reserve(batches);
 
-    for (int i = 0; i < iterations; ++i) {
-        const auto start = Clock::now();
-        const auto end = Clock::now();
+    Clock::time_point sink {};
 
-        const auto ns =
-            std::chrono::duration<double, std::nano>(
-                end - start)
+    for (int batch = 0;
+         batch < batches;
+         ++batch) {
+
+        const auto start =
+            Clock::now();
+
+        for (int call = 0;
+             call < callsPerBatch;
+             ++call) {
+            sink = Clock::now();
+        }
+
+        const auto end =
+            Clock::now();
+
+        const double elapsedNs =
+            std::chrono::duration<
+                double,
+                std::nano>(
+                    end - start)
                 .count();
 
-        HGGF_REQUIRE(std::isfinite(ns));
-        HGGF_REQUIRE(ns >= 0.0);
-        samples.push_back(ns);
+        const double perCallNs =
+            elapsedNs /
+            static_cast<double>(
+                callsPerBatch);
+
+        HGGF_REQUIRE(
+            std::isfinite(perCallNs));
+        HGGF_REQUIRE(
+            perCallNs >= 0.0);
+
+        samples.push_back(
+            perCallNs);
     }
+
+    HGGF_REQUIRE(
+        sink.time_since_epoch().count() != 0);
 
     std::sort(
         samples.begin(),
         samples.end());
 
-    return percentile(samples, 0.50);
+    return percentile(
+        samples,
+        0.50);
 }
 
 struct BenchmarkResult {
@@ -100,70 +131,97 @@ BenchmarkResult runBenchmark(
     constexpr int warmupBlocks = 256;
     constexpr int measuredBlocks = 4096;
 
-    double phase = 0.0;
-    const double phaseStep =
-        2.0 * kPi / sampleRate;
+    constexpr int programmeBlocks = 16;
+
+    std::vector<double> inputLeft(
+        static_cast<std::size_t>(
+            programmeBlocks * blockSize));
+
+    std::vector<double> inputRight(
+        static_cast<std::size_t>(
+            programmeBlocks * blockSize));
+
+    for (int block = 0;
+         block < programmeBlocks;
+         ++block) {
+
+        const double gate =
+            (block & 1) == 0
+                ? 1.0
+                : 0.35;
+
+        for (int sample = 0;
+             sample < blockSize;
+             ++sample) {
+
+            const double absoluteSample =
+                static_cast<double>(
+                    block * blockSize +
+                    sample);
+
+            const double time =
+                absoluteSample /
+                sampleRate;
+
+            const std::size_t index =
+                static_cast<std::size_t>(
+                    block * blockSize +
+                    sample);
+
+            inputLeft[index] =
+                gate * (
+                    0.32 * std::sin(
+                        2.0 * kPi * 107.0 * time) +
+                    0.22 * std::sin(
+                        2.0 * kPi * 337.0 * time)) +
+                0.20 * std::sin(
+                    2.0 * kPi * 1650.0 * time) +
+                0.19 * std::sin(
+                    2.0 * kPi * 4200.0 * time) +
+                0.14 * std::sin(
+                    2.0 * kPi * 8200.0 * time);
+
+            inputRight[index] =
+                gate * (
+                    0.30 * std::sin(
+                        2.0 * kPi * 119.0 * time) +
+                    0.21 * std::sin(
+                        2.0 * kPi * 371.0 * time)) +
+                0.19 * std::sin(
+                    2.0 * kPi * 1730.0 * time) +
+                0.18 * std::sin(
+                    2.0 * kPi * 4470.0 * time) +
+                0.13 * std::sin(
+                    2.0 * kPi * 8700.0 * time);
+        }
+    }
 
     auto processOneBlock =
         [&](int blockIndex) {
+
+            const int programmeBlock =
+                blockIndex %
+                programmeBlocks;
+
+            const std::size_t base =
+                static_cast<std::size_t>(
+                    programmeBlock *
+                    blockSize);
 
             for (int sample = 0;
                  sample < blockSize;
                  ++sample) {
 
-                const double time =
-                    phase;
-
-                const double gate =
-                    ((blockIndex / 16) & 1) == 0
-                        ? 1.0
-                        : 0.35;
+                const std::size_t index =
+                    base +
+                    static_cast<std::size_t>(
+                        sample);
 
                 double left =
-                    gate * (
-                        0.32 *
-                            std::sin(
-                                107.0 *
-                                time) +
-                        0.22 *
-                            std::sin(
-                                337.0 *
-                                time)) +
-                    0.20 *
-                        std::sin(
-                            1650.0 *
-                            time) +
-                    0.19 *
-                        std::sin(
-                            4200.0 *
-                            time) +
-                    0.14 *
-                        std::sin(
-                            8200.0 *
-                            time);
+                    inputLeft[index];
 
                 double right =
-                    gate * (
-                        0.30 *
-                            std::sin(
-                                119.0 *
-                                time) +
-                        0.21 *
-                            std::sin(
-                                371.0 *
-                                time)) +
-                    0.19 *
-                        std::sin(
-                            1730.0 *
-                            time) +
-                    0.18 *
-                        std::sin(
-                            4470.0 *
-                            time) +
-                    0.13 *
-                        std::sin(
-                            8700.0 *
-                            time);
+                    inputRight[index];
 
                 dsp.processFrame(
                     left,
@@ -173,14 +231,6 @@ BenchmarkResult runBenchmark(
                     std::isfinite(left));
                 HGGF_REQUIRE(
                     std::isfinite(right));
-
-                phase += phaseStep;
-
-                if (phase >
-                    2.0 * kPi) {
-                    phase -=
-                        2.0 * kPi;
-                }
             }
         };
 
@@ -194,7 +244,9 @@ BenchmarkResult runBenchmark(
     blockTimesUs.reserve(measuredBlocks);
 
     const double overheadUs =
-        timerOverheadNs * 0.001;
+        2.0 *
+        timerOverheadNs *
+        0.001;
 
     for (int block = 0;
          block < measuredBlocks;
@@ -283,7 +335,7 @@ int main() {
         "Realtime benchmark requires a steady clock");
 
     const double timerOverheadNs =
-        measureTimerOverheadNs();
+        measureTimerCallOverheadNs();
 
     HGGF_REQUIRE(
         std::isfinite(timerOverheadNs));
@@ -293,7 +345,7 @@ int main() {
     std::cout
         << std::fixed
         << std::setprecision(3)
-        << "Timer median overhead: "
+        << "Timer call median overhead: "
         << timerOverheadNs
         << " ns\n";
 

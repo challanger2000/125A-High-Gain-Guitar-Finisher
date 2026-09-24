@@ -221,3 +221,30 @@ add_test(
     NAME HighGainGuitarFinisher.Realtime.Benchmark
     COMMAND HighGainGuitarFinisherRealtimeBenchmark
 )
+
+
+add_executable(HighGainGuitarFinisherAutomationMathTests
+    automation_math_tests.cpp
+)
+
+target_include_directories(
+    HighGainGuitarFinisherAutomationMathTests
+    PRIVATE
+        .
+        ../src
+)
+
+target_compile_features(
+    HighGainGuitarFinisherAutomationMathTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherAutomationMathTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.Automation.Math
+    COMMAND HighGainGuitarFinisherAutomationMathTests
+)

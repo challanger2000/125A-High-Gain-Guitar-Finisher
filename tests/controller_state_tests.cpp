@@ -152,9 +152,73 @@ void verifyVersion(
         kResultOk);
 }
 
+void verifyTextRoundTrips() {
+    Controller controller;
+
+    HGGF_REQUIRE(
+        controller.initialize(nullptr) ==
+        kResultOk);
+
+    struct Case {
+        ParamID id;
+        ParamValue value;
+        double tolerance;
+    };
+
+    const Case cases[] {
+        {kFinish, 0.37, 1.0e-12},
+        {kRoom, 0.42, 1.0e-12},
+        {kRoomDecay, 0.68, 1.0e-12},
+        {kOutput, 0.50, 1.0e-12},
+        {kBypass, 0.0, 1.0e-12},
+        {kBypass, 1.0, 1.0e-12},
+        {kLowCut80, 0.0, 1.0e-12},
+        {kLowCut80,
+         dsp::lowCutNormalizedFromFrequency(
+             80.0),
+         1.0e-12},
+        {kMode, 0.0, 1.0e-12},
+        {kMode, 0.5, 1.0e-12},
+        {kMode, 1.0, 1.0e-12},
+        {kMass, 0.73, 1.0e-12}
+    };
+
+    for (const auto& item : cases) {
+        String128 text {};
+
+        HGGF_REQUIRE(
+            controller.getParamStringByValue(
+                item.id,
+                item.value,
+                text) ==
+            kResultTrue);
+
+        ParamValue parsed = -1.0;
+
+        HGGF_REQUIRE(
+            controller.getParamValueByString(
+                item.id,
+                text,
+                parsed) ==
+            kResultTrue);
+
+        HGGF_REQUIRE(
+            std::abs(
+                parsed -
+                item.value) <=
+            item.tolerance);
+    }
+
+    HGGF_REQUIRE(
+        controller.terminate() ==
+        kResultOk);
+}
+
 } // namespace
 
 int main() {
+    verifyTextRoundTrips();
+
     verifyVersion(
         1,
         0.73, 0.42, 0.61, 1.0,

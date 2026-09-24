@@ -50,6 +50,49 @@ void copyAscii(
     destination[i] = 0;
 }
 
+bool asciiEqualsIgnoreCase(
+    const TChar* text,
+    const char* ascii) noexcept {
+
+    if (!text ||
+        !ascii) {
+        return false;
+    }
+
+    std::size_t index = 0;
+
+    for (;; ++index) {
+        const TChar tc =
+            text[index];
+
+        const unsigned char ac =
+            static_cast<unsigned char>(
+                ascii[index]);
+
+        if (tc == 0 ||
+            ac == 0) {
+            return tc == 0 &&
+                ac == 0;
+        }
+
+        auto fold =
+            [](unsigned int c) {
+                return
+                    c >= 'A' &&
+                    c <= 'Z'
+                        ? c + ('a' - 'A')
+                        : c;
+            };
+
+        if (fold(
+                static_cast<unsigned int>(
+                    tc)) !=
+            fold(ac)) {
+            return false;
+        }
+    }
+}
+
 std::string percentText(
     ParamValue value) {
 
@@ -135,6 +178,14 @@ public:
 
         if (!string)
             return false;
+
+        if (asciiEqualsIgnoreCase(
+                string,
+                "Off")) {
+
+            normalizedResult = 0.0;
+            return true;
+        }
 
         UString value(
             const_cast<TChar*>(
@@ -569,6 +620,24 @@ Controller::getParamValueByString(
 
     if (!string)
         return kInvalidArgument;
+
+    if (id == kBypass) {
+        if (asciiEqualsIgnoreCase(
+                string,
+                "ACTIVE")) {
+
+            valueNormalized = 0.0;
+            return kResultTrue;
+        }
+
+        if (asciiEqualsIgnoreCase(
+                string,
+                "BYPASS")) {
+
+            valueNormalized = 1.0;
+            return kResultTrue;
+        }
+    }
 
     if (id == kMode) {
         UString value(

@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 using HighGainGuitarFinisher::dsp::MetalFinisherDSP;
 using HighGainGuitarFinisher::dsp::lowCutNormalizedFromFrequency;
@@ -345,6 +346,77 @@ void verifyFinishReenableStartsClean() {
     }
 }
 
+void verifyPathologicalInputSafety() {
+    MetalFinisherDSP dsp;
+    dsp.prepare(sampleRate);
+    dsp.setFinish(1.0);
+    dsp.setMass(1.0);
+    dsp.setLowCut(
+        lowCutNormalizedFromFrequency(
+            120.0));
+    dsp.setRoomWet(1.0);
+    dsp.setRoomDecay(1.0);
+    dsp.setMode(1.0);
+
+    const double cases[] {
+        std::numeric_limits<double>::quiet_NaN(),
+        std::numeric_limits<double>::infinity(),
+        -std::numeric_limits<double>::infinity(),
+        std::numeric_limits<double>::denorm_min(),
+        -std::numeric_limits<double>::denorm_min(),
+        1.0e300,
+        -1.0e300,
+        64.0,
+        -64.0,
+        0.0
+    };
+
+    for (int pass = 0; pass < 8; ++pass) {
+        for (const double input : cases) {
+            double left = input;
+            double right = -input;
+
+            dsp.processFrame(
+                left,
+                right);
+
+            HGGF_REQUIRE(
+                std::isfinite(left));
+            HGGF_REQUIRE(
+                std::isfinite(right));
+        }
+    }
+
+    // Follow pathological values with normal programme audio. Internal
+    // state must recover immediately rather than remain NaN/Inf poisoned.
+    for (int i = 0; i < 8192; ++i) {
+        const double time =
+            static_cast<double>(i) /
+            sampleRate;
+
+        double left =
+            0.45 * std::sin(
+                2.0 * pi * 120.0 * time) +
+            0.25 * std::sin(
+                2.0 * pi * 4300.0 * time);
+
+        double right =
+            0.43 * std::sin(
+                2.0 * pi * 145.0 * time) +
+            0.23 * std::sin(
+                2.0 * pi * 6100.0 * time);
+
+        dsp.processFrame(
+            left,
+            right);
+
+        HGGF_REQUIRE(
+            std::isfinite(left));
+        HGGF_REQUIRE(
+            std::isfinite(right));
+    }
+}
+
 void verifyFiniteAcrossSampleRates() {
     for (const double rate :
          {44100.0, 48000.0, 96000.0, 192000.0}) {
@@ -384,6 +456,7 @@ int main() {
     verifyLinearFinishAmount();
     verifyLinearMassAmount();
     verifyFinishReenableStartsClean();
+    verifyPathologicalInputSafety();
     verifyFiniteAcrossSampleRates();
 
     const double cutoff45 =
@@ -441,6 +514,7 @@ int main() {
         << "DSP smoke test passed\n"
         << "FINISH 0/50/100 linear amount law passed for all modes\n"
         << "MASS 0/50/100 linear amount law passed\n"
+        << "NaN/Inf/extreme/denormal safety passed\n"
         << "MASS gain at 140/220/280/1000 Hz: "
         << massAt140 << " / "
         << massAt220 << " / "

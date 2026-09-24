@@ -352,3 +352,40 @@ add_test(
     NAME HighGainGuitarFinisher.Controller.State
     COMMAND HighGainGuitarFinisherControllerStateTests
 )
+
+
+add_executable(HighGainGuitarFinisherParameterFlushTests
+    parameter_flush_tests.cpp
+    ../src/HighGainGuitarFinisherProcessor.cpp
+    ${HGGF_DSP_SOURCES}
+    ${vst3sdk_SOURCE_DIR}/public.sdk/source/vst/hosting/parameterchanges.cpp
+)
+
+target_include_directories(
+    HighGainGuitarFinisherParameterFlushTests
+    PRIVATE
+        .
+        ../src
+        ../src/dsp
+)
+
+target_link_libraries(
+    HighGainGuitarFinisherParameterFlushTests
+    PRIVATE
+        sdk
+)
+
+target_compile_features(
+    HighGainGuitarFinisherParameterFlushTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherParameterFlushTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.VST3.ParameterFlush
+    COMMAND HighGainGuitarFinisherParameterFlushTests
+)

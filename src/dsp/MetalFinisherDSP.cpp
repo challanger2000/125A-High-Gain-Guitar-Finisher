@@ -13,6 +13,10 @@ constexpr double kMassCleanupHz = 220.0;
 constexpr double kMassCleanupDb = -10.50;
 constexpr double kMassCleanupQ = 1.00;
 constexpr double kMassTrimGain = 0.9332543007969910; // -0.60 dB
+
+// Emergency numerical guard only. +36.1 dBFS is far beyond the intended
+// operating range but keeps hostile/invalid host input from poisoning state.
+constexpr double kEmergencyInputLimit = 64.0;
 }
 
 void MetalFinisherDSP::prepare(double sampleRate) {
@@ -306,6 +310,18 @@ void MetalFinisherDSP::processFrame(
     if (!std::isfinite(right))
         right = 0.0;
 
+    left =
+        std::clamp(
+            left,
+            -kEmergencyInputLimit,
+            kEmergencyInputLimit);
+
+    right =
+        std::clamp(
+            right,
+            -kEmergencyInputLimit,
+            kEmergencyInputLimit);
+
     const bool lowCutOn =
         lowCutEnabled(lowCutTarget_);
 
@@ -477,6 +493,11 @@ void MetalFinisherDSP::processFrame(
 
     left = processedLeft + roomLeft;
     right = processedRight + roomRight;
+
+    if (!std::isfinite(left))
+        left = 0.0;
+    if (!std::isfinite(right))
+        right = 0.0;
 }
 
 } // namespace HighGainGuitarFinisher::dsp

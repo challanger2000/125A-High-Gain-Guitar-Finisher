@@ -17,6 +17,7 @@ struct SignatureResult {
     double bodyFrequency {0.0};
     double harshFrequency {0.0};
     double maxLowReduction {0.0};
+    double rmsDeltaDb {0.0};
 };
 
 SignatureResult runSignature(
@@ -30,6 +31,9 @@ SignatureResult runSignature(
     dsp.setFinish(1.0);
 
     SignatureResult result;
+
+    long double inputPower = 0.0L;
+    long double outputPower = 0.0L;
 
     for (int i = 0;
          i < static_cast<int>(fixtureSampleRate * 4.0);
@@ -56,9 +60,17 @@ SignatureResult runSignature(
             0.05 * std::sin(
                 2.0 * pi * 9000.0 * time);
 
+        inputPower +=
+            static_cast<long double>(x) * x;
+
         double left = x;
         double right = x;
         dsp.processFrame(left, right);
+
+        outputPower +=
+            0.5L * (
+                static_cast<long double>(left) * left +
+                static_cast<long double>(right) * right);
 
         HGGF_REQUIRE(std::isfinite(left));
         HGGF_REQUIRE(std::isfinite(right));
@@ -74,6 +86,14 @@ SignatureResult runSignature(
         dsp.detectedBodyFrequency();
     result.harshFrequency =
         dsp.detectedHarshnessFrequency();
+
+    HGGF_REQUIRE(inputPower > 0.0L);
+    HGGF_REQUIRE(outputPower > 0.0L);
+
+    result.rmsDeltaDb =
+        10.0 * std::log10(
+            static_cast<double>(
+                outputPower / inputPower));
 
     return result;
 }
@@ -176,6 +196,21 @@ int main() {
             signature1920.maxLowReduction -
             signature480.maxLowReduction) < 0.08);
 
+    HGGF_REQUIRE(
+        std::abs(
+            signature441.rmsDeltaDb -
+            signature480.rmsDeltaDb) < 0.12);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature960.rmsDeltaDb -
+            signature480.rmsDeltaDb) < 0.12);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature1920.rmsDeltaDb -
+            signature480.rmsDeltaDb) < 0.12);
+
     std::cerr
         << "Sample-rate signature low/body/harsh/reduction 44.1/48/96/192 kHz:\n"
         << "  44.1: "
@@ -197,7 +232,12 @@ int main() {
         << signature1920.lowFrequency << " / "
         << signature1920.bodyFrequency << " / "
         << signature1920.harshFrequency << " / "
-        << signature1920.maxLowReduction << "\n";
+        << signature1920.maxLowReduction << "\n"
+        << "Full-path RMS delta dB 44.1/48/96/192: "
+        << signature441.rmsDeltaDb << " / "
+        << signature480.rmsDeltaDb << " / "
+        << signature960.rmsDeltaDb << " / "
+        << signature1920.rmsDeltaDb << "\n";
 
     std::cout
         << "Adaptive fixture tests passed\n"

@@ -139,6 +139,241 @@ void processAudio(
     }
 }
 
+
+void verifyOfflineRealtimeParity() {
+    Processor realtime;
+    Processor offline;
+
+    HGGF_REQUIRE(
+        realtime.initialize(nullptr) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        offline.initialize(nullptr) ==
+        kResultOk);
+
+    ProcessSetup realtimeSetup {};
+    realtimeSetup.processMode = kRealtime;
+    realtimeSetup.symbolicSampleSize = kSample64;
+    realtimeSetup.maxSamplesPerBlock = kBlockSize;
+    realtimeSetup.sampleRate = kSampleRate;
+
+    ProcessSetup offlineSetup =
+        realtimeSetup;
+
+    offlineSetup.processMode =
+        kOffline;
+
+    HGGF_REQUIRE(
+        realtime.setupProcessing(
+            realtimeSetup) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        offline.setupProcessing(
+            offlineSetup) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        realtime.setActive(true) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        offline.setActive(true) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        realtime.setProcessing(true) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        offline.setProcessing(true) ==
+        kResultOk);
+
+    ParameterChanges realtimeChanges(7);
+    ParameterChanges offlineChanges(7);
+
+    const auto configure =
+        [](ParameterChanges& changes) {
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kFinish,
+                1.0);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kRoom,
+                0.42);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kRoomDecay,
+                0.71);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kLowCut80,
+                0.58);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kMode,
+                0.5);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kMass,
+                0.63);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kOutput,
+                0.56);
+        };
+
+    configure(realtimeChanges);
+    configure(offlineChanges);
+
+    constexpr double pi =
+        3.141592653589793238462643383279502884;
+
+    for (int blockIndex = 0;
+         blockIndex < 12;
+         ++blockIndex) {
+
+        AudioBlock realtimeBlock;
+        AudioBlock offlineBlock;
+
+        realtimeBlock.data.processMode =
+            kRealtime;
+
+        offlineBlock.data.processMode =
+            kOffline;
+
+        for (int i = 0;
+             i < kBlockSize;
+             ++i) {
+
+            const double sample =
+                static_cast<double>(
+                    blockIndex *
+                        kBlockSize +
+                    i);
+
+            const double time =
+                sample /
+                kSampleRate;
+
+            const double gate =
+                (blockIndex & 1) == 0
+                    ? 1.0
+                    : 0.31;
+
+            const double left =
+                gate * (
+                    0.28 *
+                    std::sin(
+                        2.0 * pi *
+                        107.0 * time) +
+                    0.18 *
+                    std::sin(
+                        2.0 * pi *
+                        337.0 * time)) +
+                0.17 *
+                std::sin(
+                    2.0 * pi *
+                    1750.0 * time) +
+                0.13 *
+                std::sin(
+                    2.0 * pi *
+                    4300.0 * time);
+
+            const double right =
+                gate * (
+                    0.27 *
+                    std::sin(
+                        2.0 * pi *
+                        119.0 * time) +
+                    0.17 *
+                    std::sin(
+                        2.0 * pi *
+                        371.0 * time)) +
+                0.16 *
+                std::sin(
+                    2.0 * pi *
+                    1870.0 * time) +
+                0.12 *
+                std::sin(
+                    2.0 * pi *
+                    6100.0 * time);
+
+            realtimeBlock.inLeft[
+                static_cast<std::size_t>(i)] =
+                left;
+
+            realtimeBlock.inRight[
+                static_cast<std::size_t>(i)] =
+                right;
+
+            offlineBlock.inLeft[
+                static_cast<std::size_t>(i)] =
+                left;
+
+            offlineBlock.inRight[
+                static_cast<std::size_t>(i)] =
+                right;
+        }
+
+        processAudio(
+            realtime,
+            realtimeBlock,
+            blockIndex == 0
+                ? &realtimeChanges
+                : nullptr);
+
+        processAudio(
+            offline,
+            offlineBlock,
+            blockIndex == 0
+                ? &offlineChanges
+                : nullptr);
+
+        for (int i = 0;
+             i < kBlockSize;
+             ++i) {
+
+            const auto index =
+                static_cast<std::size_t>(i);
+
+            HGGF_REQUIRE(
+                realtimeBlock.outLeft[index] ==
+                offlineBlock.outLeft[index]);
+
+            HGGF_REQUIRE(
+                realtimeBlock.outRight[index] ==
+                offlineBlock.outRight[index]);
+        }
+    }
+
+    HGGF_REQUIRE(
+        realtime.setProcessing(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        offline.setProcessing(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        realtime.setActive(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        offline.setActive(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        realtime.terminate() ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        offline.terminate() ==
+        kResultOk);
+}
+
 } // namespace
 
 int main() {
@@ -234,6 +469,8 @@ int main() {
     HGGF_REQUIRE(
         processor.terminate() ==
         kResultOk);
+
+    verifyOfflineRealtimeParity();
 
     return 0;
 }

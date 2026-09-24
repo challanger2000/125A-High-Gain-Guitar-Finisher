@@ -435,6 +435,73 @@ void verifyVersion6RoundTrip() {
         0.69);
 }
 
+void verifyRejectedStateIsAtomic() {
+    Processor processor;
+
+    auto initial =
+        makeState(
+            6,
+            0.81,
+            0.26,
+            0.57,
+            1.0,
+            0.44,
+            0.72,
+            0.50,
+            0.63);
+
+    HGGF_REQUIRE(
+        processor.setState(
+            &initial) ==
+        kResultOk);
+
+    const auto before =
+        readCurrentState(
+            processor);
+
+    MemoryStream truncated;
+
+    IBStreamer writer(
+        &truncated,
+        kLittleEndian);
+
+    HGGF_REQUIRE(
+        writer.writeInt32(6));
+
+    HGGF_REQUIRE(
+        writer.writeDouble(0.05));
+    HGGF_REQUIRE(
+        writer.writeDouble(0.95));
+    HGGF_REQUIRE(
+        writer.writeDouble(0.10));
+    HGGF_REQUIRE(
+        writer.writeDouble(0.0));
+    HGGF_REQUIRE(
+        writer.writeDouble(0.90));
+    // Deliberately omit DECAY / MODE / MASS.
+
+    rewindStream(
+        truncated);
+
+    HGGF_REQUIRE(
+        processor.setState(
+            &truncated) ==
+        kResultFalse);
+
+    const auto after =
+        readCurrentState(
+            processor);
+
+    requireNear(after.finish, before.finish);
+    requireNear(after.room, before.room);
+    requireNear(after.output, before.output);
+    requireNear(after.bypass, before.bypass);
+    requireNear(after.lowCut, before.lowCut);
+    requireNear(after.decay, before.decay);
+    requireNear(after.mode, before.mode);
+    requireNear(after.mass, before.mass);
+}
+
 void verifyStateClampingAndRejection() {
     {
         Processor processor;
@@ -539,6 +606,7 @@ int main() {
     verifyVersion3And4Migration();
     verifyVersion5Migration();
     verifyVersion6RoundTrip();
+    verifyRejectedStateIsAtomic();
     verifyStateClampingAndRejection();
 
     return 0;

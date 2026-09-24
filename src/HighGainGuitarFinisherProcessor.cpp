@@ -707,6 +707,7 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
     IBStreamer stream(state, kLittleEndian);
 
     int32 version = 0;
+
     if (!stream.readInt32(version) ||
         version < kFirstSupportedStateVersion ||
         version > kStateVersion) {
@@ -717,8 +718,9 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
 
     for (double& value : legacyValues) {
         if (!stream.readDouble(value) ||
-            !std::isfinite(value))
+            !std::isfinite(value)) {
             return kResultFalse;
+        }
 
         value =
             std::clamp(
@@ -727,10 +729,19 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
                 1.0);
     }
 
-    finish_ = legacyValues[0];
-    room_ = legacyValues[1];
-    output_ = legacyValues[2];
-    bypass_ = legacyValues[3];
+    const double nextFinish =
+        legacyValues[0];
+
+    const double nextRoom =
+        legacyValues[1];
+
+    const double nextOutput =
+        legacyValues[2];
+
+    const double nextBypass =
+        legacyValues[3];
+
+    double nextLowCut = 0.0;
 
     if (version >= 2) {
         double savedLowCut = 0.0;
@@ -740,7 +751,7 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
             return kResultFalse;
         }
 
-        lowCut_ =
+        nextLowCut =
             version >= 4
                 ? std::clamp(
                     savedLowCut,
@@ -750,54 +761,70 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
                     ? dsp::lowCutNormalizedFromFrequency(
                         80.0)
                     : 0.0);
-    } else {
-        lowCut_ = 0.0;
     }
+
+    double nextRoomDecay =
+        nextRoom;
 
     if (version >= 3) {
-        if (!stream.readDouble(roomDecay_) ||
-            !std::isfinite(roomDecay_)) {
+        double savedDecay = 0.0;
+
+        if (!stream.readDouble(savedDecay) ||
+            !std::isfinite(savedDecay)) {
             return kResultFalse;
         }
 
-        roomDecay_ =
+        nextRoomDecay =
             std::clamp(
-                roomDecay_,
+                savedDecay,
                 0.0,
                 1.0);
-    } else {
-        roomDecay_ = room_;
     }
+
+    double nextMode = 0.0;
 
     if (version >= 5) {
-        if (!stream.readDouble(mode_) ||
-            !std::isfinite(mode_)) {
+        double savedMode = 0.0;
+
+        if (!stream.readDouble(savedMode) ||
+            !std::isfinite(savedMode)) {
             return kResultFalse;
         }
 
-        mode_ =
+        nextMode =
             std::clamp(
-                mode_,
+                savedMode,
                 0.0,
                 1.0);
-    } else {
-        mode_ = 0.0;
     }
+
+    double nextMass = 0.0;
 
     if (version >= 6) {
-        if (!stream.readDouble(mass_) ||
-            !std::isfinite(mass_)) {
+        double savedMass = 0.0;
+
+        if (!stream.readDouble(savedMass) ||
+            !std::isfinite(savedMass)) {
             return kResultFalse;
         }
 
-        mass_ =
+        nextMass =
             std::clamp(
-                mass_,
+                savedMass,
                 0.0,
                 1.0);
-    } else {
-        mass_ = 0.0;
     }
+
+    // State loading is transactional. Do not mutate the live plugin until
+    // the complete serialized state has been read and validated.
+    finish_ = nextFinish;
+    room_ = nextRoom;
+    output_ = nextOutput;
+    bypass_ = nextBypass;
+    lowCut_ = nextLowCut;
+    roomDecay_ = nextRoomDecay;
+    mode_ = nextMode;
+    mass_ = nextMass;
 
     syncDSPParameters();
     finisher_.reset();

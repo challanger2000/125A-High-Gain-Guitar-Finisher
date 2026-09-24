@@ -152,6 +152,106 @@ void verifyVersion(
         kResultOk);
 }
 
+void verifyRejectedComponentStateIsAtomic() {
+    Controller controller;
+
+    HGGF_REQUIRE(
+        controller.initialize(nullptr) ==
+        kResultOk);
+
+    auto initial =
+        makeState(
+            6,
+            0.81,
+            0.26,
+            0.57,
+            1.0,
+            0.44,
+            0.72,
+            0.50,
+            0.63);
+
+    HGGF_REQUIRE(
+        controller.setComponentState(
+            &initial) ==
+        kResultOk);
+
+    const double beforeFinish =
+        controller.getParamNormalized(kFinish);
+    const double beforeRoom =
+        controller.getParamNormalized(kRoom);
+    const double beforeOutput =
+        controller.getParamNormalized(kOutput);
+    const double beforeBypass =
+        controller.getParamNormalized(kBypass);
+    const double beforeLowCut =
+        controller.getParamNormalized(kLowCut80);
+    const double beforeDecay =
+        controller.getParamNormalized(kRoomDecay);
+    const double beforeMode =
+        controller.getParamNormalized(kMode);
+    const double beforeMass =
+        controller.getParamNormalized(kMass);
+
+    MemoryStream truncated;
+
+    IBStreamer writer(
+        &truncated,
+        kLittleEndian);
+
+    HGGF_REQUIRE(writer.writeInt32(6));
+    HGGF_REQUIRE(writer.writeDouble(0.05));
+    HGGF_REQUIRE(writer.writeDouble(0.95));
+    HGGF_REQUIRE(writer.writeDouble(0.10));
+    HGGF_REQUIRE(writer.writeDouble(0.0));
+    HGGF_REQUIRE(writer.writeDouble(0.90));
+    // Deliberately omit DECAY / MODE / MASS.
+
+    rewindStream(
+        truncated);
+
+    HGGF_REQUIRE(
+        controller.setComponentState(
+            &truncated) ==
+        kResultFalse);
+
+    requireNear(
+        controller.getParamNormalized(kFinish),
+        beforeFinish);
+
+    requireNear(
+        controller.getParamNormalized(kRoom),
+        beforeRoom);
+
+    requireNear(
+        controller.getParamNormalized(kOutput),
+        beforeOutput);
+
+    requireNear(
+        controller.getParamNormalized(kBypass),
+        beforeBypass);
+
+    requireNear(
+        controller.getParamNormalized(kLowCut80),
+        beforeLowCut);
+
+    requireNear(
+        controller.getParamNormalized(kRoomDecay),
+        beforeDecay);
+
+    requireNear(
+        controller.getParamNormalized(kMode),
+        beforeMode);
+
+    requireNear(
+        controller.getParamNormalized(kMass),
+        beforeMass);
+
+    HGGF_REQUIRE(
+        controller.terminate() ==
+        kResultOk);
+}
+
 void verifyTextRoundTrips() {
     Controller controller;
 
@@ -217,6 +317,7 @@ void verifyTextRoundTrips() {
 } // namespace
 
 int main() {
+    verifyRejectedComponentStateIsAtomic();
     verifyTextRoundTrips();
 
     verifyVersion(

@@ -719,20 +719,10 @@ Controller::setComponentState(
         return kResultFalse;
     }
 
-    const ParamID legacyIds[4] {
-        kFinish,
-        kRoom,
-        kOutput,
-        kBypass
-    };
+    double legacyValues[4] {};
 
-    double legacyRoom =
-        0.0;
-
-    for (const auto id :
-         legacyIds) {
-
-        double value = 0.0;
+    for (double& value :
+         legacyValues) {
 
         if (!stream.readDouble(
                 value) ||
@@ -742,20 +732,26 @@ Controller::setComponentState(
             return kResultFalse;
         }
 
-        const double normalized =
+        value =
             std::clamp(
                 value,
                 0.0,
                 1.0);
-
-        setParamNormalized(
-            id,
-            normalized);
-
-        if (id == kRoom)
-            legacyRoom =
-                normalized;
     }
+
+    const double nextFinish =
+        legacyValues[0];
+
+    const double nextRoom =
+        legacyValues[1];
+
+    const double nextOutput =
+        legacyValues[2];
+
+    const double nextBypass =
+        legacyValues[3];
+
+    double nextLowCut = 0.0;
 
     if (version >= 2) {
         double lowCut = 0.0;
@@ -768,27 +764,21 @@ Controller::setComponentState(
             return kResultFalse;
         }
 
-        const double
-            normalizedLowCut =
-                version >= 4
-                    ? std::clamp(
-                        lowCut,
-                        0.0,
-                        1.0)
-                    : (lowCut >= 0.5
-                        ? dsp::
-                            lowCutNormalizedFromFrequency(
-                                80.0)
-                        : 0.0);
-
-        setParamNormalized(
-            kLowCut80,
-            normalizedLowCut);
-    } else {
-        setParamNormalized(
-            kLowCut80,
-            0.0);
+        nextLowCut =
+            version >= 4
+                ? std::clamp(
+                    lowCut,
+                    0.0,
+                    1.0)
+                : (lowCut >= 0.5
+                    ? dsp::
+                        lowCutNormalizedFromFrequency(
+                            80.0)
+                    : 0.0);
     }
+
+    double nextDecay =
+        nextRoom;
 
     if (version >= 3) {
         double decay = 0.0;
@@ -801,17 +791,14 @@ Controller::setComponentState(
             return kResultFalse;
         }
 
-        setParamNormalized(
-            kRoomDecay,
+        nextDecay =
             std::clamp(
                 decay,
                 0.0,
-                1.0));
-    } else {
-        setParamNormalized(
-            kRoomDecay,
-            legacyRoom);
+                1.0);
     }
+
+    double nextMode = 0.0;
 
     if (version >= 5) {
         double mode = 0.0;
@@ -819,20 +806,18 @@ Controller::setComponentState(
         if (!stream.readDouble(
                 mode) ||
             !std::isfinite(mode)) {
+
             return kResultFalse;
         }
 
-        setParamNormalized(
-            kMode,
+        nextMode =
             std::clamp(
                 mode,
                 0.0,
-                1.0));
-    } else {
-        setParamNormalized(
-            kMode,
-            0.0);
+                1.0);
     }
+
+    double nextMass = 0.0;
 
     if (version >= 6) {
         double mass = 0.0;
@@ -840,20 +825,50 @@ Controller::setComponentState(
         if (!stream.readDouble(
                 mass) ||
             !std::isfinite(mass)) {
+
             return kResultFalse;
         }
 
-        setParamNormalized(
-            kMass,
+        nextMass =
             std::clamp(
                 mass,
                 0.0,
-                1.0));
-    } else {
-        setParamNormalized(
-            kMass,
-            0.0);
+                1.0);
     }
+
+    // Mirror the processor's transactional state semantics: a malformed
+    // component state must not partially update host-visible parameters.
+    setParamNormalized(
+        kFinish,
+        nextFinish);
+
+    setParamNormalized(
+        kRoom,
+        nextRoom);
+
+    setParamNormalized(
+        kOutput,
+        nextOutput);
+
+    setParamNormalized(
+        kBypass,
+        nextBypass);
+
+    setParamNormalized(
+        kLowCut80,
+        nextLowCut);
+
+    setParamNormalized(
+        kRoomDecay,
+        nextDecay);
+
+    setParamNormalized(
+        kMode,
+        nextMode);
+
+    setParamNormalized(
+        kMass,
+        nextMass);
 
     return kResultOk;
 }

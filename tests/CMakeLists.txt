@@ -389,3 +389,31 @@ add_test(
     NAME HighGainGuitarFinisher.VST3.ParameterFlush
     COMMAND HighGainGuitarFinisherParameterFlushTests
 )
+
+
+add_executable(HighGainGuitarFinisherRealtimeAllocationTests
+    realtime_allocation_tests.cpp
+    ${HGGF_DSP_SOURCES}
+)
+
+target_include_directories(
+    HighGainGuitarFinisherRealtimeAllocationTests
+    PRIVATE
+        .
+        ../src/dsp
+)
+
+target_compile_features(
+    HighGainGuitarFinisherRealtimeAllocationTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherRealtimeAllocationTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.Realtime.NoHeapAllocation
+    COMMAND HighGainGuitarFinisherRealtimeAllocationTests
+)

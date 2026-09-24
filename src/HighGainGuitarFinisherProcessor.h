@@ -74,7 +74,8 @@ private:
 
     bool applyAutomationAtSample(
         std::array<AutomationCursor, kAutomatedParameterCount>& cursors,
-        Steinberg::int32 sampleOffset) noexcept;
+        Steinberg::int32 sampleOffset,
+        bool& outputPathChanged) noexcept;
 
     void syncDSPParameters() noexcept;
 

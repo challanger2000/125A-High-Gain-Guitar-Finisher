@@ -18,8 +18,8 @@ The eventual public version/name must be chosen only when the external release g
 ## Internally verified PASS
 
 Latest confirmed workflow:
-- run #70
-- commit `683364dd6d683ccb99b7c7a7475e2ece44efd85b`
+- run #72
+- commit `39dd213281ba6cc7c134d81334eb7f313ebdc9c3`
 
 Confirmed:
 - Steinberg VST3 Validator: 47/47 PASS
@@ -112,6 +112,8 @@ Examples:
   - 192 kHz / 256 samples: p99 667.8 us versus 1333.3 us deadline; one isolated 8859 us max spike.
 
 The large max spikes are not reflected in the mean/p95/p99 behaviour and vary between identical-code CI runs. They are retained as shared-runner jitter evidence, not hidden.
+
+Run #72, after the source-audit fixes, again observed 0 overruns across all 16 benchmark combinations.
 
 Final release still requires representative local/host testing on the Windows target system.
 

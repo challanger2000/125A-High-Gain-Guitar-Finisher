@@ -7,6 +7,26 @@ namespace HighGainGuitarFinisher::dsp {
 
 namespace {
 constexpr double kEpsilon = 1.0e-20;
+constexpr double kMaximumEnergyMagnitude = 1.0e100;
+
+double safeStereoEnergy(
+    double left,
+    double right) noexcept {
+
+    const double boundedLeft =
+        std::min(
+            std::abs(left),
+            kMaximumEnergyMagnitude);
+
+    const double boundedRight =
+        std::min(
+            std::abs(right),
+            kMaximumEnergyMagnitude);
+
+    return 0.5 * (
+        boundedLeft * boundedLeft +
+        boundedRight * boundedRight);
+}
 }
 
 double AutoLevelCompensator::timeCoefficient(
@@ -102,14 +122,14 @@ void AutoLevelCompensator::processFrame(
         processedRight = 0.0;
 
     const double inputInstant =
-        0.5 * (
-            referenceLeft * referenceLeft +
-            referenceRight * referenceRight);
+        safeStereoEnergy(
+            referenceLeft,
+            referenceRight);
 
     const double outputInstant =
-        0.5 * (
-            processedLeft * processedLeft +
-            processedRight * processedRight);
+        safeStereoEnergy(
+            processedLeft,
+            processedRight);
 
     inputEnergy_ =
         energyCoefficient_ * inputEnergy_ +

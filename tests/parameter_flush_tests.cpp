@@ -3,6 +3,7 @@
 #include "HighGainGuitarFinisherIDs.h"
 
 #include "public.sdk/source/vst/hosting/parameterchanges.h"
+#include "pluginterfaces/vst/vstspeaker.h"
 
 #include <array>
 #include <cmath>
@@ -889,6 +890,272 @@ void verifyFloatDoubleParity() {
         kResultOk);
 }
 
+
+void verifyMonoRoomMatchesStereoCollapse() {
+    Processor mono;
+    Processor stereo;
+
+    HGGF_REQUIRE(
+        mono.initialize(nullptr) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        stereo.initialize(nullptr) ==
+        kResultOk);
+
+    SpeakerArrangement monoIn =
+        SpeakerArr::kMono;
+
+    SpeakerArrangement monoOut =
+        SpeakerArr::kMono;
+
+    SpeakerArrangement stereoIn =
+        SpeakerArr::kStereo;
+
+    SpeakerArrangement stereoOut =
+        SpeakerArr::kStereo;
+
+    HGGF_REQUIRE(
+        mono.setBusArrangements(
+            &monoIn,
+            1,
+            &monoOut,
+            1) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        stereo.setBusArrangements(
+            &stereoIn,
+            1,
+            &stereoOut,
+            1) ==
+        kResultOk);
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample64;
+    setup.maxSamplesPerBlock = kBlockSize;
+    setup.sampleRate = kSampleRate;
+
+    HGGF_REQUIRE(
+        mono.setupProcessing(setup) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        stereo.setupProcessing(setup) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        mono.setActive(true) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        stereo.setActive(true) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        mono.setProcessing(true) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        stereo.setProcessing(true) ==
+        kResultOk);
+
+    ParameterChanges monoChanges(6);
+    ParameterChanges stereoChanges(6);
+
+    const auto configure =
+        [](ParameterChanges& changes) {
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kFinish,
+                0.84);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kRoom,
+                0.73);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kRoomDecay,
+                0.82);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kLowCut80,
+                0.46);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kMass,
+                0.55);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kOutput,
+                0.53);
+        };
+
+    configure(monoChanges);
+    configure(stereoChanges);
+
+    std::array<double, kBlockSize> monoInput {};
+    std::array<double, kBlockSize> monoOutput {};
+    std::array<double*, 1> monoInputPointers {
+        monoInput.data()
+    };
+    std::array<double*, 1> monoOutputPointers {
+        monoOutput.data()
+    };
+
+    AudioBusBuffers monoInputBus {};
+    AudioBusBuffers monoOutputBus {};
+
+    monoInputBus.numChannels = 1;
+    monoInputBus.channelBuffers64 =
+        monoInputPointers.data();
+
+    monoOutputBus.numChannels = 1;
+    monoOutputBus.channelBuffers64 =
+        monoOutputPointers.data();
+
+    ProcessData monoData {};
+    monoData.processMode = kRealtime;
+    monoData.symbolicSampleSize = kSample64;
+    monoData.numSamples = kBlockSize;
+    monoData.numInputs = 1;
+    monoData.numOutputs = 1;
+    monoData.inputs = &monoInputBus;
+    monoData.outputs = &monoOutputBus;
+
+    constexpr double pi =
+        3.141592653589793238462643383279502884;
+
+    bool monoTailObserved = false;
+
+    for (int block = 0;
+         block < 40;
+         ++block) {
+
+        AudioBlock stereoBlock;
+
+        const bool sourceActive =
+            block < 10;
+
+        for (int i = 0;
+             i < kBlockSize;
+             ++i) {
+
+            const double absoluteSample =
+                static_cast<double>(
+                    block * kBlockSize + i);
+
+            const double t =
+                absoluteSample /
+                kSampleRate;
+
+            const double sample =
+                sourceActive
+                    ? (
+                        0.32 * std::sin(
+                            2.0 * pi *
+                            109.0 * t) +
+                        0.19 * std::sin(
+                            2.0 * pi *
+                            347.0 * t) +
+                        0.14 * std::sin(
+                            2.0 * pi *
+                            3900.0 * t))
+                    : 0.0;
+
+            monoInput[
+                static_cast<std::size_t>(i)] =
+                sample;
+
+            stereoBlock.inLeft[
+                static_cast<std::size_t>(i)] =
+                sample;
+
+            stereoBlock.inRight[
+                static_cast<std::size_t>(i)] =
+                sample;
+        }
+
+        monoData.inputParameterChanges =
+            block == 0
+                ? &monoChanges
+                : nullptr;
+
+        HGGF_REQUIRE(
+            mono.process(monoData) ==
+            kResultOk);
+
+        processAudio(
+            stereo,
+            stereoBlock,
+            block == 0
+                ? &stereoChanges
+                : nullptr);
+
+        for (int i = 0;
+             i < kBlockSize;
+             ++i) {
+
+            const auto index =
+                static_cast<std::size_t>(i);
+
+            const double expectedMono =
+                0.5 * (
+                    stereoBlock.outLeft[index] +
+                    stereoBlock.outRight[index]);
+
+            HGGF_REQUIRE(
+                monoOutput[index] ==
+                expectedMono);
+        }
+
+        const bool stereoSilent =
+            stereoBlock.outputBus.silenceFlags ==
+            uint64 {3};
+
+        const bool monoSilent =
+            monoOutputBus.silenceFlags ==
+            uint64 {1};
+
+        HGGF_REQUIRE(
+            monoSilent ==
+            stereoSilent);
+
+        if (!sourceActive &&
+            !monoSilent) {
+            monoTailObserved = true;
+        }
+    }
+
+    HGGF_REQUIRE(
+        monoTailObserved);
+
+    HGGF_REQUIRE(
+        mono.setProcessing(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        stereo.setProcessing(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        mono.setActive(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        stereo.setActive(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        mono.terminate() ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        stereo.terminate() ==
+        kResultOk);
+}
+
 } // namespace
 
 int main() {
@@ -989,6 +1256,7 @@ int main() {
     verifySilenceFlagsAndRoomTail();
     verifyStopStartLifecycleReset();
     verifyFloatDoubleParity();
+    verifyMonoRoomMatchesStereoCollapse();
 
     return 0;
 }

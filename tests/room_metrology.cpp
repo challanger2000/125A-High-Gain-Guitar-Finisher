@@ -685,6 +685,93 @@ void verifyTailClears() {
     HGGF_REQUIRE(finalPeak == 0.0);
 }
 
+void verifyClearedTailDoesNotRevive() {
+    IndustrialRoom room;
+    room.prepare(kSampleRate);
+    room.setWetDry(1.0);
+    room.setDecay(1.0);
+
+    // Excite all delay lines with real input history.
+    for (int i = 0;
+         i < static_cast<int>(
+             kSampleRate * 0.80);
+         ++i) {
+
+        const double input =
+            i < static_cast<int>(
+                    kSampleRate * 0.20)
+                ? 0.4 *
+                    std::sin(
+                        2.0 * kPi *
+                        311.0 *
+                        static_cast<double>(i) /
+                        kSampleRate)
+                : 0.0;
+
+        double wetLeft = 0.0;
+        double wetRight = 0.0;
+
+        room.processFrame(
+            input,
+            input,
+            wetLeft,
+            wetRight);
+    }
+
+    // Let WET reach zero so the internal tail reset is triggered.
+    room.setWetDry(0.0);
+
+    for (int i = 0;
+         i < static_cast<int>(
+             kSampleRate * 0.80);
+         ++i) {
+
+        double wetLeft = 0.0;
+        double wetRight = 0.0;
+
+        room.processFrame(
+            0.0,
+            0.0,
+            wetLeft,
+            wetRight);
+    }
+
+    HGGF_REQUIRE(
+        room.currentWetDry() <
+        1.0e-6);
+
+    // Re-enable on silence. A logical O(1) reset must not expose any stale
+    // samples left physically in the circular-delay storage.
+    room.setWetDry(1.0);
+
+    double revivedPeak = 0.0;
+
+    for (int i = 0;
+         i < static_cast<int>(
+             kSampleRate * 0.40);
+         ++i) {
+
+        double wetLeft = 0.0;
+        double wetRight = 0.0;
+
+        room.processFrame(
+            0.0,
+            0.0,
+            wetLeft,
+            wetRight);
+
+        revivedPeak =
+            std::max(
+                revivedPeak,
+                std::max(
+                    std::abs(wetLeft),
+                    std::abs(wetRight)));
+    }
+
+    HGGF_REQUIRE(
+        revivedPeak == 0.0);
+}
+
 double verifyAudibleMaximum() {
     IndustrialRoom room;
     room.prepare(kSampleRate);
@@ -807,6 +894,7 @@ int main() {
     verifyTimingAcrossSampleRates();
     measureRoomAcrossSampleRates();
     verifyTailClears();
+    verifyClearedTailDoesNotRevive();
     verifyAdaptiveDucking();
     verifyGuitarProgrammeStress();
     verifyIndependentDecay();

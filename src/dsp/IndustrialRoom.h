@@ -44,6 +44,7 @@ private:
     private:
         std::vector<double> buffer_ {};
         std::size_t writeIndex_ {0};
+        std::size_t samplesSinceReset_ {0};
     };
 
     static double timeCoefficient(double sampleRate,

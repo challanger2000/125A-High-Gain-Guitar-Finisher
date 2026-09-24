@@ -31,15 +31,15 @@ void IndustrialRoom::CircularDelay::prepare(
         0.0);
 
     writeIndex_ = 0;
+    samplesSinceReset_ = 0;
 }
 
 void IndustrialRoom::CircularDelay::reset() noexcept {
-    std::fill(
-        buffer_.begin(),
-        buffer_.end(),
-        0.0);
-
+    // O(1) logical reset for realtime safety. Old buffer contents remain
+    // physically present but are unreadable until each delayed position has
+    // been overwritten by post-reset samples.
     writeIndex_ = 0;
+    samplesSinceReset_ = 0;
 }
 
 double IndustrialRoom::CircularDelay::read(
@@ -53,6 +53,9 @@ double IndustrialRoom::CircularDelay::read(
             delaySamples,
             1,
             buffer_.size() - 1);
+
+    if (delay > samplesSinceReset_)
+        return 0.0;
 
     const std::size_t index =
         (writeIndex_ + buffer_.size() - delay) %
@@ -71,6 +74,11 @@ void IndustrialRoom::CircularDelay::push(
 
     writeIndex_ =
         (writeIndex_ + 1) % buffer_.size();
+
+    if (samplesSinceReset_ <
+        buffer_.size()) {
+        ++samplesSinceReset_;
+    }
 }
 
 double IndustrialRoom::timeCoefficient(

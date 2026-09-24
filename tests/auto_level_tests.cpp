@@ -153,8 +153,8 @@ void verifyFastPhraseBootstrap() {
     }
 }
 
-void verifyProgrammeChangeDoesNotPump() {
-    constexpr double sampleRate = 48000.0;
+void verifyProgrammeChangeDoesNotPump(
+    double sampleRate) {
 
     AutoLevelCompensator level;
     level.prepare(sampleRate);
@@ -230,7 +230,9 @@ void verifyProgrammeChangeDoesNotPump() {
         maxGainDb - minGainDb;
 
     std::cerr
-        << "Programme-change auto-level excursion / max sample step dB: "
+        << "Programme-change auto-level "
+        << sampleRate
+        << " Hz excursion / max sample step dB: "
         << excursionDb << " / "
         << maxStepDb << "\n";
 
@@ -337,7 +339,7 @@ void verifySilenceReturn() {
 
 int main() {
     for (const double sampleRate :
-         {44100.0, 48000.0, 96000.0}) {
+         {44100.0, 48000.0, 96000.0, 192000.0}) {
 
         verifyDirectCompensation(
             sampleRate,
@@ -357,7 +359,13 @@ int main() {
     }
 
     verifyFastPhraseBootstrap();
-    verifyProgrammeChangeDoesNotPump();
+
+    for (const double sampleRate :
+         {44100.0, 48000.0, 96000.0, 192000.0}) {
+        verifyProgrammeChangeDoesNotPump(
+            sampleRate);
+    }
+
     verifyFinishZeroAfterMakeup();
     verifySilenceReturn();
 

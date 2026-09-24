@@ -827,6 +827,16 @@ int main() {
             0.40,
             1.00);
 
+    HGGF_REQUIRE(
+        densityEarlyLate.emptyFraction == 0.0);
+    HGGF_REQUIRE(
+        densityLate.emptyFraction == 0.0);
+
+    HGGF_REQUIRE(
+        densityEarlyLate.spreadDb < 9.0);
+    HGGF_REQUIRE(
+        densityLate.spreadDb < 11.0);
+
     std::cerr
         << "ROOM density 120-400 ms median/p10/p90/spread/empty: "
         << densityEarlyLate.medianDb << " / "

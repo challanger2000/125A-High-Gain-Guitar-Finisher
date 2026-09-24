@@ -312,3 +312,43 @@ add_test(
     NAME HighGainGuitarFinisher.Bypass.Crossfade
     COMMAND HighGainGuitarFinisherBypassCrossfadeTests
 )
+
+
+add_executable(HighGainGuitarFinisherControllerStateTests
+    controller_state_tests.cpp
+    ../src/HighGainGuitarFinisherController.cpp
+    ../src/SteelKnob.cpp
+    ../src/SteelPanelView.cpp
+    ../src/BrandLogoView.cpp
+    ${vst3sdk_SOURCE_DIR}/public.sdk/source/common/memorystream.cpp
+)
+
+target_include_directories(
+    HighGainGuitarFinisherControllerStateTests
+    PRIVATE
+        .
+        ../src
+        ../src/dsp
+)
+
+target_link_libraries(
+    HighGainGuitarFinisherControllerStateTests
+    PRIVATE
+        sdk
+        vstgui_support
+)
+
+target_compile_features(
+    HighGainGuitarFinisherControllerStateTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherControllerStateTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.Controller.State
+    COMMAND HighGainGuitarFinisherControllerStateTests
+)

@@ -1,7 +1,10 @@
 #pragma once
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
+#include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "dsp/MetalFinisherDSP.h"
+
+#include <array>
 
 namespace HighGainGuitarFinisher {
 
@@ -46,14 +49,42 @@ public:
         Steinberg::IBStream* state) override;
 
 private:
-    void readParameterChanges(
-        Steinberg::Vst::IParameterChanges* changes);
+    static constexpr std::size_t kAutomatedParameterCount = 8;
+
+    struct AutomationCursor {
+        Steinberg::Vst::IParamValueQueue* queue {nullptr};
+        Steinberg::int32 pointIndex {0};
+        Steinberg::int32 pointCount {0};
+        Steinberg::int32 nextSampleOffset {-1};
+        Steinberg::Vst::ParamValue nextValue {0.0};
+        Steinberg::Vst::ParamID id {0};
+        bool hasNext {false};
+    };
+
+    void applyParameterValue(
+        Steinberg::Vst::ParamID id,
+        Steinberg::Vst::ParamValue value) noexcept;
+
+    void readLastParameterChanges(
+        Steinberg::Vst::IParameterChanges* changes) noexcept;
+
+    void initializeAutomationCursors(
+        Steinberg::Vst::IParameterChanges* changes,
+        std::array<AutomationCursor, kAutomatedParameterCount>& cursors) noexcept;
+
+    bool applyAutomationAtSample(
+        std::array<AutomationCursor, kAutomatedParameterCount>& cursors,
+        Steinberg::int32 sampleOffset) noexcept;
+
+    void syncDSPParameters() noexcept;
 
     template <typename Sample>
-    void processBlock(Sample** inputs,
-                      Sample** outputs,
-                      Steinberg::int32 numSamples,
-                      Steinberg::int32 numChannels);
+    void processBlock(
+        Sample** inputs,
+        Sample** outputs,
+        Steinberg::int32 numSamples,
+        Steinberg::int32 numChannels,
+        Steinberg::Vst::IParameterChanges* parameterChanges);
 
     dsp::MetalFinisherDSP finisher_ {};
 

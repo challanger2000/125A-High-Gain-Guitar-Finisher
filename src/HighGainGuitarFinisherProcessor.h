@@ -55,11 +55,17 @@ private:
         Steinberg::Vst::IParamValueQueue* queue {nullptr};
         Steinberg::int32 pointIndex {0};
         Steinberg::int32 pointCount {0};
+        Steinberg::int32 segmentStartOffset {-1};
+        Steinberg::Vst::ParamValue segmentStartValue {0.0};
         Steinberg::int32 nextSampleOffset {-1};
         Steinberg::Vst::ParamValue nextValue {0.0};
         Steinberg::Vst::ParamID id {0};
+        bool discrete {false};
         bool hasNext {false};
     };
+
+    Steinberg::Vst::ParamValue currentParameterValue(
+        Steinberg::Vst::ParamID id) const noexcept;
 
     void applyParameterValue(
         Steinberg::Vst::ParamID id,

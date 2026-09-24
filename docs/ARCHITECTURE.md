@@ -109,7 +109,9 @@ ROOM follows FINISH, Auto Level and MASS, so the FINISH loudness compensator doe
 
 Public parameter IDs remain stable.
 
-The processor consumes every valid VST3 parameter-queue point at its supplied sample offset inside the current process block. It does not collapse automation to the last point of the block.
+The processor consumes every valid VST3 parameter-queue point and reconstructs continuous automation as the linear curve segments defined by the host, including the implicit previous value at block position -1. Discrete MODE and BYPASS changes remain stepped.
+
+This follows Steinberg's IParamValueQueue contract rather than collapsing automation to the last point of a block or merely stepping continuous values at transmitted points.
 
 No heap allocation is introduced by automation processing; a fixed-size cursor array is used for the known public parameters.
 

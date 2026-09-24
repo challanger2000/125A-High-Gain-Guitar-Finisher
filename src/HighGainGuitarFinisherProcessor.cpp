@@ -92,6 +92,22 @@ tresult PLUGIN_API Processor::setProcessing(TBool state) {
     return kResultTrue;
 }
 
+ParamValue Processor::currentParameterValue(
+    Steinberg::Vst::ParamID id) const noexcept {
+
+    switch (id) {
+        case kFinish:    return finish_;
+        case kRoom:      return room_;
+        case kRoomDecay: return roomDecay_;
+        case kOutput:    return output_;
+        case kBypass:    return bypass_;
+        case kLowCut80:  return lowCut_;
+        case kMode:      return mode_;
+        case kMass:      return mass_;
+        default:         return 0.0;
+    }
+}
+
 void Processor::applyParameterValue(
     Steinberg::Vst::ParamID id,
     ParamValue value) noexcept {
@@ -188,6 +204,12 @@ void Processor::initializeAutomationCursors(
         cursor.pointCount =
             queue->getPointCount();
         cursor.id = id;
+        cursor.discrete =
+            id == kBypass ||
+            id == kMode;
+        cursor.segmentStartOffset = -1;
+        cursor.segmentStartValue =
+            currentParameterValue(id);
 
         int32 offset = 0;
         ParamValue value = 0.0;
@@ -211,26 +233,25 @@ bool Processor::applyAutomationAtSample(
     bool changed = false;
     outputPathChanged = false;
 
-    for (auto& cursor : cursors) {
-        while (cursor.hasNext &&
-               cursor.nextSampleOffset <= sampleOffset) {
-
-            applyParameterValue(
-                cursor.id,
-                cursor.nextValue);
-
+    const auto markChanged =
+        [&](Steinberg::Vst::ParamID id) noexcept {
             changed = true;
 
-            if (cursor.id == kOutput ||
-                cursor.id == kBypass) {
+            if (id == kOutput ||
+                id == kBypass) {
                 outputPathChanged = true;
             }
+        };
+
+    const auto advancePoint =
+        [](AutomationCursor& cursor) noexcept {
+
             ++cursor.pointIndex;
 
             if (cursor.pointIndex >=
                 cursor.pointCount) {
                 cursor.hasNext = false;
-                break;
+                return;
             }
 
             int32 nextOffset = 0;
@@ -241,20 +262,115 @@ bool Processor::applyAutomationAtSample(
                     nextOffset,
                     nextValue) != kResultTrue) {
                 cursor.hasNext = false;
-                break;
+                return;
             }
 
-            // Invalid backwards-moving offsets are ignored rather than
-            // replayed indefinitely inside the audio callback.
             if (nextOffset <
                 cursor.nextSampleOffset) {
                 cursor.hasNext = false;
-                break;
+                return;
             }
 
-            cursor.nextSampleOffset = nextOffset;
-            cursor.nextValue = nextValue;
+            cursor.nextSampleOffset =
+                nextOffset;
+            cursor.nextValue =
+                nextValue;
+        };
+
+    for (auto& cursor : cursors) {
+        if (!cursor.hasNext)
+            continue;
+
+        if (cursor.discrete) {
+            while (cursor.hasNext &&
+                   cursor.nextSampleOffset <=
+                       sampleOffset) {
+
+                applyParameterValue(
+                    cursor.id,
+                    cursor.nextValue);
+
+                markChanged(
+                    cursor.id);
+
+                cursor.segmentStartOffset =
+                    cursor.nextSampleOffset;
+
+                cursor.segmentStartValue =
+                    std::clamp(
+                        std::isfinite(
+                            cursor.nextValue)
+                            ? cursor.nextValue
+                            : cursor.segmentStartValue,
+                        0.0,
+                        1.0);
+
+                advancePoint(
+                    cursor);
+            }
+
+            continue;
         }
+
+        while (cursor.hasNext &&
+               cursor.nextSampleOffset <=
+                   sampleOffset) {
+
+            applyParameterValue(
+                cursor.id,
+                cursor.nextValue);
+
+            markChanged(
+                cursor.id);
+
+            cursor.segmentStartOffset =
+                cursor.nextSampleOffset;
+
+            cursor.segmentStartValue =
+                std::clamp(
+                    std::isfinite(
+                        cursor.nextValue)
+                        ? cursor.nextValue
+                        : cursor.segmentStartValue,
+                    0.0,
+                    1.0);
+
+            advancePoint(
+                cursor);
+        }
+
+        if (!cursor.hasNext)
+            continue;
+
+        const int32 span =
+            cursor.nextSampleOffset -
+            cursor.segmentStartOffset;
+
+        if (span <= 0)
+            continue;
+
+        const double fraction =
+            std::clamp(
+                static_cast<double>(
+                    sampleOffset -
+                    cursor.segmentStartOffset) /
+                    static_cast<double>(
+                        span),
+                0.0,
+                1.0);
+
+        const ParamValue value =
+            cursor.segmentStartValue +
+            fraction *
+                (cursor.nextValue -
+                 cursor.segmentStartValue);
+
+        applyParameterValue(
+            cursor.id,
+            value);
+
+        markChanged(
+            cursor.id);
     }
 
     return changed;

@@ -35,13 +35,27 @@ tresult PLUGIN_API Processor::setBusArrangements(
     SpeakerArrangement* outputs,
     int32 numOuts) {
 
-    if (numIns == 1 && numOuts == 1 &&
-        inputs[0] == SpeakerArr::kStereo &&
-        outputs[0] == SpeakerArr::kStereo) {
-        return AudioEffect::setBusArrangements(inputs, numIns, outputs, numOuts);
+    if (numIns != 1 ||
+        numOuts != 1) {
+        return kResultFalse;
     }
 
-    return kResultFalse;
+    const bool mono =
+        inputs[0] == SpeakerArr::kMono &&
+        outputs[0] == SpeakerArr::kMono;
+
+    const bool stereo =
+        inputs[0] == SpeakerArr::kStereo &&
+        outputs[0] == SpeakerArr::kStereo;
+
+    if (!mono && !stereo)
+        return kResultFalse;
+
+    return AudioEffect::setBusArrangements(
+        inputs,
+        numIns,
+        outputs,
+        numOuts);
 }
 
 tresult PLUGIN_API Processor::canProcessSampleSize(int32 symbolicSampleSize) {
@@ -495,6 +509,16 @@ void Processor::processBlock(
 
         left *= outputGain;
         right *= outputGain;
+
+        if (!outputRight) {
+            // The DSP deliberately runs its spatial room as a stereo field.
+            // For Mono->Mono, collapse that complete field instead of
+            // discarding the right-side reflections.
+            left =
+                0.5 * (
+                    left +
+                    right);
+        }
 
         if (!std::isfinite(left))
             left = 0.0;

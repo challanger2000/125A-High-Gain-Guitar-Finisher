@@ -2,7 +2,7 @@
 
 ## Current signal path
 
-Stereo In -> optional continuous Low Cut -> adaptive FINISH -> bounded Auto Level / edge protection -> MASS -> ROOM -> OUTPUT -> Stereo Out
+Mono or Stereo In -> optional continuous Low Cut -> adaptive FINISH -> bounded Auto Level / edge protection -> MASS -> ROOM -> OUTPUT -> matching Mono or Stereo Out
 
 BYPASS skips intentional processing and output trim so bypass remains unity.
 
@@ -126,6 +126,12 @@ Older supported states are migrated deliberately:
 - MODE and MASS default safely when absent.
 
 DSP state is reset on activation, processing restart, state load and bypass transitions.
+
+## Bus arrangements
+
+The default bus is stereo, but the processor accepts both symmetric Mono->Mono and Stereo->Stereo arrangements. Asymmetric Mono->Stereo and Stereo->Mono requests are rejected.
+
+In mono operation, the main FINISH/MASS path receives the mono source on both internal channels. ROOM is still evaluated as its intended stereo field and then collapsed to mono at the output, so one side of the asymmetric reflection pattern is not silently discarded.
 
 ## Numerical and realtime safety
 

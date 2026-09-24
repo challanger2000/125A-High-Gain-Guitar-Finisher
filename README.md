@@ -54,6 +54,7 @@ All test guards are runtime-enforced in Release builds.
 
 ## Build
 
+- Mono->Mono and Stereo->Stereo processing
 - Windows x64
 - Visual Studio 2022
 - CMake 3.25+

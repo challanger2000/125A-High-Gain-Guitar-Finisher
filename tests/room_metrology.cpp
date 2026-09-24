@@ -53,6 +53,121 @@ double rmsWindow(
         : 0.0;
 }
 
+struct DensityMetrics {
+    double medianDb {0.0};
+    double p10Db {0.0};
+    double p90Db {0.0};
+    double spreadDb {0.0};
+    double emptyFraction {0.0};
+};
+
+DensityMetrics roomDensity(
+    const std::vector<double>& left,
+    const std::vector<double>& right,
+    double startSeconds,
+    double endSeconds) {
+
+    constexpr double binSeconds = 0.005;
+    const std::size_t binSamples =
+        static_cast<std::size_t>(
+            kSampleRate * binSeconds);
+
+    const std::size_t begin =
+        static_cast<std::size_t>(
+            startSeconds * kSampleRate);
+
+    const std::size_t end =
+        std::min<std::size_t>(
+            left.size(),
+            static_cast<std::size_t>(
+                endSeconds * kSampleRate));
+
+    std::vector<double> bins;
+
+    for (std::size_t pos = begin;
+         pos + binSamples <= end;
+         pos += binSamples) {
+
+        long double sum = 0.0L;
+
+        for (std::size_t i = pos;
+             i < pos + binSamples;
+             ++i) {
+
+            sum += 0.5L * (
+                static_cast<long double>(left[i]) * left[i] +
+                static_cast<long double>(right[i]) * right[i]);
+        }
+
+        const double rms =
+            std::sqrt(
+                static_cast<double>(
+                    sum /
+                    static_cast<long double>(
+                        binSamples)));
+
+        bins.push_back(
+            db(rms));
+    }
+
+    HGGF_REQUIRE(
+        bins.size() >= 20);
+
+    auto sorted = bins;
+
+    std::sort(
+        sorted.begin(),
+        sorted.end());
+
+    const auto percentile =
+        [&](double fraction) {
+            const std::size_t index =
+                static_cast<std::size_t>(
+                    std::llround(
+                        fraction *
+                        static_cast<double>(
+                            sorted.size() - 1)));
+
+            return sorted[
+                std::min(
+                    index,
+                    sorted.size() - 1)];
+        };
+
+    const double p10 =
+        percentile(0.10);
+
+    const double median =
+        percentile(0.50);
+
+    const double p90 =
+        percentile(0.90);
+
+    const double silenceFloor =
+        median - 30.0;
+
+    const std::size_t emptyBins =
+        static_cast<std::size_t>(
+            std::count_if(
+                bins.begin(),
+                bins.end(),
+                [silenceFloor](double value) {
+                    return value <
+                        silenceFloor;
+                }));
+
+    return {
+        median,
+        p10,
+        p90,
+        p90 - p10,
+        static_cast<double>(
+            emptyBins) /
+            static_cast<double>(
+                bins.size())
+    };
+}
+
 double wetToneRms(double frequency) {
     IndustrialRoom room;
     room.prepare(kSampleRate);
@@ -697,6 +812,34 @@ int main() {
 
     HGGF_REQUIRE(lowVsMid < -4.5);
     HGGF_REQUIRE(highVsMid < -4.5);
+
+    const auto densityEarlyLate =
+        roomDensity(
+            left,
+            right,
+            0.12,
+            0.40);
+
+    const auto densityLate =
+        roomDensity(
+            left,
+            right,
+            0.40,
+            1.00);
+
+    std::cerr
+        << "ROOM density 120-400 ms median/p10/p90/spread/empty: "
+        << densityEarlyLate.medianDb << " / "
+        << densityEarlyLate.p10Db << " / "
+        << densityEarlyLate.p90Db << " / "
+        << densityEarlyLate.spreadDb << " / "
+        << densityEarlyLate.emptyFraction << "\n"
+        << "ROOM density 400-1000 ms median/p10/p90/spread/empty: "
+        << densityLate.medianDb << " / "
+        << densityLate.p10Db << " / "
+        << densityLate.p90Db << " / "
+        << densityLate.spreadDb << " / "
+        << densityLate.emptyFraction << "\n";
 
     std::cout
         << "ROOM metrology passed\n"

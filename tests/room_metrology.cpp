@@ -814,7 +814,7 @@ int main() {
     const double wetToDryDb =
         verifyAudibleMaximum();
 
-    constexpr double seconds = 5.5;
+    constexpr double seconds = 6.5;
 
     const std::size_t count =
         static_cast<std::size_t>(
@@ -880,6 +880,12 @@ int main() {
     const double finalTail =
         rmsWindow(left, right, 4.00, 5.00);
 
+    const double hostTailEnd =
+        rmsWindow(left, right, 5.50, 6.00);
+
+    const double postHostTail =
+        rmsWindow(left, right, 6.00, 6.40);
+
     HGGF_REQUIRE(early > 1.0e-6);
     HGGF_REQUIRE(mid > 1.0e-7);
 
@@ -909,6 +915,17 @@ int main() {
         longTailToMid < -10.0);
 
     HGGF_REQUIRE(finalToMid < -28.0);
+
+    const double hostTailEndDb =
+        db(hostTailEnd);
+
+    const double postHostTailDb =
+        db(postHostTail);
+
+    HGGF_REQUIRE(
+        std::isfinite(hostTailEndDb));
+    HGGF_REQUIRE(
+        std::isfinite(postHostTailDb));
 
     long double leftEnergy = 0.0L;
     long double rightEnergy = 0.0L;
@@ -1037,6 +1054,11 @@ int main() {
         << db(longTail)
         << " / "
         << db(finalTail)
+        << "\n"
+        << "Host-tail 5.5-6.0 / post-tail 6.0-6.4 RMS dB: "
+        << hostTailEndDb
+        << " / "
+        << postHostTailDb
         << "\n"
         << "Wet stereo correlation: "
         << correlation

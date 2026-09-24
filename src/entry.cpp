@@ -5,7 +5,7 @@
 #include "HighGainGuitarFinisherProcessor.h"
 
 #define stringPluginName "125A High Gain Guitar Finisher"
-#define stringPluginVersion "0.1.0"
+#define stringPluginVersion "0.3.0"
 
 BEGIN_FACTORY_DEF(
     "125A",

@@ -248,3 +248,39 @@ add_test(
     NAME HighGainGuitarFinisher.Automation.Math
     COMMAND HighGainGuitarFinisherAutomationMathTests
 )
+
+
+add_executable(HighGainGuitarFinisherStateMigrationTests
+    state_migration_tests.cpp
+    ../src/HighGainGuitarFinisherProcessor.cpp
+    ${HGGF_DSP_SOURCES}
+)
+
+target_include_directories(
+    HighGainGuitarFinisherStateMigrationTests
+    PRIVATE
+        .
+        ../src
+        ../src/dsp
+)
+
+target_link_libraries(
+    HighGainGuitarFinisherStateMigrationTests
+    PRIVATE
+        sdk
+)
+
+target_compile_features(
+    HighGainGuitarFinisherStateMigrationTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherStateMigrationTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.State.Migration
+    COMMAND HighGainGuitarFinisherStateMigrationTests
+)

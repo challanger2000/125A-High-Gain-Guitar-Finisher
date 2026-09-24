@@ -73,4 +73,4 @@ All test guards are runtime-enforced in Release builds.
 - CMake 3.25+
 - Steinberg VST3 SDK 3.8.1, pinned through CMake FetchContent
 
-See docs/ARCHITECTURE.md, docs/DSP_PLAN.md and docs/MEASUREMENT_STRATEGY.md for engineering details.
+See docs/ARCHITECTURE.md, docs/DSP_PLAN.md, docs/MEASUREMENT_STRATEGY.md and docs/V2_READINESS.md for engineering details and the current release-readiness gate.

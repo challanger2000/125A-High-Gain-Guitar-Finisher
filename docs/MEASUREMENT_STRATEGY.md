@@ -78,7 +78,11 @@ Processor QA must verify:
 - safe defaults for parameters absent from older states;
 - sample-offset-aware VST3 automation;
 - artifact-free bypass transitions with exact unity dry endpoints;
-- project/state recall reproducing the intended audio state.
+- project/state recall reproducing the intended audio state;
+- processor/controller migration parity;
+- parameter-only no-buffer flush calls leave audio lifecycle state untouched;
+- offline and realtime processor modes remain sample-exact;
+- per-channel silence flags track dry silence and delayed ROOM-tail output.
 
 ## Realtime measurement
 

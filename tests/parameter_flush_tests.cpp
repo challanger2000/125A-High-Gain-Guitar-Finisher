@@ -374,6 +374,123 @@ void verifyOfflineRealtimeParity() {
         kResultOk);
 }
 
+
+void verifySilenceFlagsAndRoomTail() {
+    Processor processor;
+
+    HGGF_REQUIRE(
+        processor.initialize(nullptr) ==
+        kResultOk);
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample64;
+    setup.maxSamplesPerBlock = kBlockSize;
+    setup.sampleRate = kSampleRate;
+
+    HGGF_REQUIRE(
+        processor.setupProcessing(setup) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        processor.setActive(true) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        processor.setProcessing(true) ==
+        kResultOk);
+
+    // Exact digital silence with ROOM off must mark both stereo
+    // output channels silent.
+    AudioBlock silentBlock;
+    silentBlock.inLeft.fill(0.0);
+    silentBlock.inRight.fill(0.0);
+
+    processAudio(
+        processor,
+        silentBlock);
+
+    HGGF_REQUIRE(
+        silentBlock.outputBus.silenceFlags ==
+        uint64 {3});
+
+    // Channel flags are independent: left-only dry audio keeps only
+    // the right channel marked silent.
+    AudioBlock leftOnlyBlock;
+    leftOnlyBlock.inLeft.fill(0.125);
+    leftOnlyBlock.inRight.fill(0.0);
+
+    processAudio(
+        processor,
+        leftOnlyBlock);
+
+    HGGF_REQUIRE(
+        leftOnlyBlock.outputBus.silenceFlags ==
+        uint64 {2});
+
+    ParameterChanges roomChanges(2);
+    addChange(
+        roomChanges,
+        HighGainGuitarFinisher::kRoom,
+        1.0);
+    addChange(
+        roomChanges,
+        HighGainGuitarFinisher::kRoomDecay,
+        1.0);
+
+    AudioBlock impulseBlock;
+    impulseBlock.inLeft.fill(0.0);
+    impulseBlock.inRight.fill(0.0);
+    impulseBlock.inLeft[0] = 0.5;
+    impulseBlock.inRight[0] = 0.5;
+
+    processAudio(
+        processor,
+        impulseBlock,
+        &roomChanges);
+
+    HGGF_REQUIRE(
+        impulseBlock.outputBus.silenceFlags ==
+        uint64 {0});
+
+    bool tailObserved = false;
+
+    for (int block = 0;
+         block < 24;
+         ++block) {
+
+        AudioBlock tailBlock;
+        tailBlock.inLeft.fill(0.0);
+        tailBlock.inRight.fill(0.0);
+
+        processAudio(
+            processor,
+            tailBlock);
+
+        if (tailBlock.outputBus.silenceFlags !=
+            uint64 {3}) {
+            tailObserved = true;
+            break;
+        }
+    }
+
+    // The delayed ROOM field starts after the dry impulse. Silence flags
+    // must therefore become non-silent again when the reported tail arrives.
+    HGGF_REQUIRE(tailObserved);
+
+    HGGF_REQUIRE(
+        processor.setProcessing(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        processor.setActive(false) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        processor.terminate() ==
+        kResultOk);
+}
+
 } // namespace
 
 int main() {
@@ -471,6 +588,7 @@ int main() {
         kResultOk);
 
     verifyOfflineRealtimeParity();
+    verifySilenceFlagsAndRoomTail();
 
     return 0;
 }

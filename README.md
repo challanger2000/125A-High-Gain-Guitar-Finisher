@@ -48,7 +48,11 @@ The manual **Build Windows VST3** workflow builds the plugin and runs:
 - dedicated ROOM impulse/decay/stereo/spectral and guitar-programme metrology,
 - tonal/RMS/peak/crest/stereo measurements,
 - 44.1/48/96/192 kHz stability checks,
-- impulse/latency validation.
+- impulse/latency validation,
+- processor/controller state migration parity,
+- parameter-only VST3 flush and artifact-safe bypass transitions,
+- exact offline/realtime render parity,
+- per-channel silence flags including delayed ROOM-tail reactivation.
 
 All test guards are runtime-enforced in Release builds.
 

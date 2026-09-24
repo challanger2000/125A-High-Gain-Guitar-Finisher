@@ -1156,6 +1156,207 @@ void verifyMonoRoomMatchesStereoCollapse() {
         kResultOk);
 }
 
+void verifyVariableBlockAndRateLifecycle() {
+    Processor processor;
+
+    HGGF_REQUIRE(
+        processor.initialize(nullptr) ==
+        kResultOk);
+
+    constexpr int32 maxBlock = 1024;
+
+    std::array<double, maxBlock> inLeft {};
+    std::array<double, maxBlock> inRight {};
+    std::array<double, maxBlock> outLeft {};
+    std::array<double, maxBlock> outRight {};
+
+    std::array<double*, 2> inputPointers {
+        inLeft.data(),
+        inRight.data()
+    };
+
+    std::array<double*, 2> outputPointers {
+        outLeft.data(),
+        outRight.data()
+    };
+
+    AudioBusBuffers inputBus {};
+    AudioBusBuffers outputBus {};
+
+    inputBus.numChannels = 2;
+    inputBus.channelBuffers64 =
+        inputPointers.data();
+
+    outputBus.numChannels = 2;
+    outputBus.channelBuffers64 =
+        outputPointers.data();
+
+    ProcessData data {};
+    data.processMode = kRealtime;
+    data.symbolicSampleSize = kSample64;
+    data.numInputs = 1;
+    data.numOutputs = 1;
+    data.inputs = &inputBus;
+    data.outputs = &outputBus;
+
+    const int32 blockSizes[] {
+        1,
+        2,
+        7,
+        31,
+        32,
+        63,
+        64,
+        127,
+        128,
+        255,
+        256,
+        511,
+        1024
+    };
+
+    constexpr double pi =
+        3.141592653589793238462643383279502884;
+
+    for (const double sampleRate :
+         {44100.0,
+          48000.0,
+          96000.0,
+          192000.0}) {
+
+        ProcessSetup setup {};
+        setup.processMode = kRealtime;
+        setup.symbolicSampleSize = kSample64;
+        setup.maxSamplesPerBlock = maxBlock;
+        setup.sampleRate = sampleRate;
+
+        HGGF_REQUIRE(
+            processor.setupProcessing(
+                setup) ==
+            kResultOk);
+
+        HGGF_REQUIRE(
+            processor.getTailSamples() ==
+            static_cast<uint32>(
+                std::llround(
+                    sampleRate * 6.0)));
+
+        HGGF_REQUIRE(
+            processor.setActive(true) ==
+            kResultOk);
+
+        HGGF_REQUIRE(
+            processor.setProcessing(true) ==
+            kResultOk);
+
+        ParameterChanges initialChanges(6);
+
+        addChange(
+            initialChanges,
+            HighGainGuitarFinisher::kFinish,
+            0.82);
+
+        addChange(
+            initialChanges,
+            HighGainGuitarFinisher::kMass,
+            0.61);
+
+        addChange(
+            initialChanges,
+            HighGainGuitarFinisher::kRoom,
+            0.34);
+
+        addChange(
+            initialChanges,
+            HighGainGuitarFinisher::kRoomDecay,
+            0.72);
+
+        addChange(
+            initialChanges,
+            HighGainGuitarFinisher::kLowCut80,
+            0.47);
+
+        addChange(
+            initialChanges,
+            HighGainGuitarFinisher::kMode,
+            0.5);
+
+        bool firstBlock = true;
+        int64 absoluteSample = 0;
+
+        for (const int32 blockSize :
+             blockSizes) {
+
+            for (int32 i = 0;
+                 i < blockSize;
+                 ++i) {
+
+                const double time =
+                    static_cast<double>(
+                        absoluteSample + i) /
+                    sampleRate;
+
+                inLeft[
+                    static_cast<std::size_t>(i)] =
+                    0.31 * std::sin(
+                        2.0 * pi * 117.0 * time) +
+                    0.19 * std::sin(
+                        2.0 * pi * 3900.0 * time);
+
+                inRight[
+                    static_cast<std::size_t>(i)] =
+                    0.29 * std::sin(
+                        2.0 * pi * 139.0 * time) +
+                    0.17 * std::sin(
+                        2.0 * pi * 6100.0 * time);
+            }
+
+            inputBus.silenceFlags = 0;
+            outputBus.silenceFlags = 0;
+
+            data.numSamples = blockSize;
+            data.inputParameterChanges =
+                firstBlock
+                    ? &initialChanges
+                    : nullptr;
+
+            HGGF_REQUIRE(
+                processor.process(data) ==
+                kResultOk);
+
+            for (int32 i = 0;
+                 i < blockSize;
+                 ++i) {
+
+                HGGF_REQUIRE(
+                    std::isfinite(
+                        outLeft[
+                            static_cast<std::size_t>(i)]));
+
+                HGGF_REQUIRE(
+                    std::isfinite(
+                        outRight[
+                            static_cast<std::size_t>(i)]));
+            }
+
+            firstBlock = false;
+            absoluteSample += blockSize;
+        }
+
+        HGGF_REQUIRE(
+            processor.setProcessing(false) ==
+            kResultOk);
+
+        HGGF_REQUIRE(
+            processor.setActive(false) ==
+            kResultOk);
+    }
+
+    HGGF_REQUIRE(
+        processor.terminate() ==
+        kResultOk);
+}
+
 } // namespace
 
 int main() {
@@ -1257,6 +1458,7 @@ int main() {
     verifyStopStartLifecycleReset();
     verifyFloatDoubleParity();
     verifyMonoRoomMatchesStereoCollapse();
+    verifyVariableBlockAndRateLifecycle();
 
     return 0;
 }

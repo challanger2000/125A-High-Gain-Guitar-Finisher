@@ -160,7 +160,7 @@ void verifyTextRoundTrips() {
         kResultOk);
 
     struct Case {
-        ParamID id;
+        Steinberg::Vst::ParamID id;
         ParamValue value;
         double tolerance;
     };

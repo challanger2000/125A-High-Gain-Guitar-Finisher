@@ -454,8 +454,6 @@ void MetalFinisherDSP::processFrame(
         processedRight =
             baseRight +
             (fullRight - baseRight) * finish_;
-    } else {
-        autoLevel_.reset();
     }
 
     // MASS is a fixed, level-conscious guitar character stage:

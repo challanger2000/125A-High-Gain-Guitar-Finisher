@@ -16,11 +16,11 @@ namespace {
 
 constexpr double kSampleRate = 48000.0;
 constexpr int32 kBlockSize = 256;
-constexpr double kInput = 0.1;
+constexpr double kInputSample = 0.1;
 
 void addChange(
     ParameterChanges& changes,
-    ParamID id,
+    Steinberg::Vst::ParamID id,
     ParamValue value) {
 
     int32 queueIndex = 0;
@@ -56,8 +56,8 @@ struct AudioBlock {
     ProcessData data {};
 
     AudioBlock() {
-        inLeft.fill(kInput);
-        inRight.fill(kInput);
+        inLeft.fill(kInputSample);
+        inRight.fill(kInputSample);
 
         inputPointers = {
             inLeft.data(),
@@ -91,7 +91,7 @@ struct AudioBlock {
 
 void processFlush(
     Processor& processor,
-    ParamID id,
+    Steinberg::Vst::ParamID id,
     ParamValue value) {
 
     ParameterChanges changes(1);
@@ -169,7 +169,7 @@ int main() {
     ParameterChanges outputChange(1);
     addChange(
         outputChange,
-        kOutput,
+        HighGainGuitarFinisher::kOutput,
         1.0);
 
     AudioBlock active;
@@ -185,7 +185,7 @@ int main() {
 
     processFlush(
         processor,
-        kBypass,
+        HighGainGuitarFinisher::kBypass,
         1.0);
 
     AudioBlock enteringBypass;
@@ -202,12 +202,12 @@ int main() {
     HGGF_REQUIRE(
         std::abs(
             enteringBypass.outLeft.back() -
-            kInput) <
+            kInputSample) <
         1.0e-12);
 
     processFlush(
         processor,
-        kBypass,
+        HighGainGuitarFinisher::kBypass,
         0.0);
 
     AudioBlock leavingBypass;

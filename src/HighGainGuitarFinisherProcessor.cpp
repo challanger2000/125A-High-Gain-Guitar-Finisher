@@ -87,21 +87,50 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
     }
 
     syncDSPParameters();
-    lastBypassed_ = bypass_ >= 0.5;
+
+    const bool bypassed =
+        bypass_ >= 0.5;
+
+    bypassCrossfade_.prepare(
+        sampleRate_,
+        bypassed);
+
+    lastBypassed_ = bypassed;
+    bypassDSPDormant_ = bypassed;
 
     return AudioEffect::setupProcessing(setup);
 }
 
 tresult PLUGIN_API Processor::setActive(TBool state) {
-    if (state)
+    if (state) {
         finisher_.reset();
+
+        const bool bypassed =
+            bypass_ >= 0.5;
+
+        bypassCrossfade_.reset(
+            bypassed);
+
+        lastBypassed_ = bypassed;
+        bypassDSPDormant_ = bypassed;
+    }
 
     return AudioEffect::setActive(state);
 }
 
 tresult PLUGIN_API Processor::setProcessing(TBool state) {
-    if (state)
+    if (state) {
         finisher_.reset();
+
+        const bool bypassed =
+            bypass_ >= 0.5;
+
+        bypassCrossfade_.reset(
+            bypassed);
+
+        lastBypassed_ = bypassed;
+        bypassDSPDormant_ = bypassed;
+    }
 
     AudioEffect::setProcessing(state);
     return kResultTrue;
@@ -412,19 +441,24 @@ void Processor::processBlock(
         bypass_ >= 0.5;
 
     if (bypassed != lastBypassed_) {
-        finisher_.reset();
+        if (!bypassed) {
+            finisher_.reset();
+            bypassDSPDormant_ = false;
+        }
+
+        bypassCrossfade_.setBypassed(
+            bypassed);
+
         lastBypassed_ = bypassed;
     }
 
     syncDSPParameters();
 
-    double outputGain =
-        bypassed
-            ? 1.0
-            : std::pow(
-                10.0,
-                ((output_ * 24.0) - 12.0) /
-                    20.0);
+    double activeOutputGain =
+        std::pow(
+            10.0,
+            ((output_ * 24.0) - 12.0) /
+                20.0);
 
     const Sample* inputLeft =
         inputs ? inputs[0] : nullptr;
@@ -463,7 +497,17 @@ void Processor::processBlock(
 
                 if (nextBypassed !=
                     lastBypassed_) {
-                    finisher_.reset();
+
+                    if (!nextBypassed) {
+                        finisher_.reset();
+                        bypassDSPDormant_ =
+                            false;
+                    }
+
+                    bypassCrossfade_.
+                        setBypassed(
+                            nextBypassed);
+
                     lastBypassed_ =
                         nextBypassed;
                 }
@@ -471,14 +515,12 @@ void Processor::processBlock(
                 bypassed =
                     nextBypassed;
 
-                outputGain =
-                    bypassed
-                        ? 1.0
-                        : std::pow(
-                            10.0,
-                            ((output_ * 24.0) -
-                             12.0) /
-                                20.0);
+                activeOutputGain =
+                    std::pow(
+                        10.0,
+                        ((output_ * 24.0) -
+                         12.0) /
+                            20.0);
             }
         }
 
@@ -502,13 +544,48 @@ void Processor::processBlock(
         if (!std::isfinite(right))
             right = 0.0;
 
-        if (!bypassed)
+        const double dryLeft = left;
+        const double dryRight = right;
+
+        const bool processingNeeded =
+            !bypassDSPDormant_ ||
+            !bypassed ||
+            !bypassCrossfade_.
+                fullyBypassed();
+
+        if (processingNeeded) {
             finisher_.processFrame(
                 left,
                 right);
+        }
 
-        left *= outputGain;
-        right *= outputGain;
+        left *= activeOutputGain;
+        right *= activeOutputGain;
+
+        const double bypassMix =
+            bypassCrossfade_.advance();
+
+        if (bypassMix >= 1.0) {
+            left = dryLeft;
+            right = dryRight;
+        } else if (bypassMix > 0.0) {
+            left +=
+                (dryLeft - left) *
+                bypassMix;
+
+            right +=
+                (dryRight - right) *
+                bypassMix;
+        }
+
+        if (bypassed &&
+            bypassCrossfade_.
+                fullyBypassed() &&
+            !bypassDSPDormant_) {
+
+            finisher_.reset();
+            bypassDSPDormant_ = true;
+        }
 
         if (!outputRight) {
             // The DSP deliberately runs its spatial room as a stereo field.
@@ -544,8 +621,15 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
             data.inputParameterChanges);
 
         syncDSPParameters();
-        lastBypassed_ =
+
+        const bool bypassed =
             bypass_ >= 0.5;
+
+        bypassCrossfade_.reset(
+            bypassed);
+
+        lastBypassed_ = bypassed;
+        bypassDSPDormant_ = bypassed;
 
         return kResultOk;
     }
@@ -560,6 +644,16 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
         readLastParameterChanges(
             data.inputParameterChanges);
         syncDSPParameters();
+
+        const bool bypassed =
+            bypass_ >= 0.5;
+
+        bypassCrossfade_.reset(
+            bypassed);
+
+        lastBypassed_ = bypassed;
+        bypassDSPDormant_ = bypassed;
+
         return kResultOk;
     }
 
@@ -736,8 +830,16 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
 
     syncDSPParameters();
     finisher_.reset();
-    lastBypassed_ =
+
+    const bool bypassed =
         bypass_ >= 0.5;
+
+    bypassCrossfade_.prepare(
+        sampleRate_,
+        bypassed);
+
+    lastBypassed_ = bypassed;
+    bypassDSPDormant_ = bypassed;
 
     return kResultOk;
 }

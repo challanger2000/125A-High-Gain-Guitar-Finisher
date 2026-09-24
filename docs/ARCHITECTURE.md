@@ -4,7 +4,7 @@
 
 Mono or Stereo In -> optional continuous Low Cut -> adaptive FINISH -> bounded Auto Level / edge protection -> MASS -> ROOM -> OUTPUT -> matching Mono or Stereo Out
 
-BYPASS skips intentional processing and output trim so bypass remains unity.
+BYPASS crossfades over 5 ms between the processed/output-trimmed path and exact unity dry audio. Once the fade reaches full bypass, intentional DSP is reset and allowed to remain dormant until re-enabled.
 
 ## Adaptive FINISH
 

@@ -3,6 +3,7 @@
 #include "public.sdk/source/vst/vstaudioeffect.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "dsp/MetalFinisherDSP.h"
+#include "BypassCrossfade.h"
 
 #include <array>
 
@@ -105,7 +106,9 @@ private:
     double mode_ {0.0};
     double mass_ {0.0};
 
+    BypassCrossfade bypassCrossfade_ {};
     bool lastBypassed_ {false};
+    bool bypassDSPDormant_ {false};
 };
 
 } // namespace HighGainGuitarFinisher

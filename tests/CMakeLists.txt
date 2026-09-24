@@ -285,3 +285,30 @@ add_test(
     NAME HighGainGuitarFinisher.State.Migration
     COMMAND HighGainGuitarFinisherStateMigrationTests
 )
+
+
+add_executable(HighGainGuitarFinisherBypassCrossfadeTests
+    bypass_crossfade_tests.cpp
+)
+
+target_include_directories(
+    HighGainGuitarFinisherBypassCrossfadeTests
+    PRIVATE
+        .
+        ../src
+)
+
+target_compile_features(
+    HighGainGuitarFinisherBypassCrossfadeTests
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherBypassCrossfadeTests
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.Bypass.Crossfade
+    COMMAND HighGainGuitarFinisherBypassCrossfadeTests
+)

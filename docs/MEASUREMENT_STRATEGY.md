@@ -77,7 +77,7 @@ Processor QA must verify:
 - legacy state migration;
 - safe defaults for parameters absent from older states;
 - sample-offset-aware VST3 automation;
-- bypass transitions;
+- artifact-free bypass transitions with exact unity dry endpoints;
 - project/state recall reproducing the intended audio state.
 
 ## Realtime measurement

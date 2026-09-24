@@ -16,13 +16,19 @@ constexpr double sampleRate = 48000.0;
 
 double measureLowCutGain(
     double cutoffFrequency,
-    double probeFrequency) {
+    double probeFrequency,
+    double testSampleRate = sampleRate) {
 
-    constexpr int warmup = 24000;
-    constexpr int measured = 48000;
+    const int warmup =
+        static_cast<int>(
+            testSampleRate * 0.5);
+
+    const int measured =
+        static_cast<int>(
+            testSampleRate * 1.0);
 
     MetalFinisherDSP dsp;
-    dsp.prepare(sampleRate);
+    dsp.prepare(testSampleRate);
     dsp.setFinish(0.0);
     dsp.setLowCut(
         lowCutNormalizedFromFrequency(
@@ -37,7 +43,7 @@ double measureLowCutGain(
                 2.0 * pi *
                 probeFrequency *
                 i /
-                sampleRate);
+                testSampleRate);
 
         double left = x;
         double right = x;
@@ -163,13 +169,19 @@ void verifyLinearFinishAmount() {
 }
 
 double measureMassGain(
-    double probeFrequency) {
+    double probeFrequency,
+    double testSampleRate = sampleRate) {
 
-    constexpr int warmup = 24000;
-    constexpr int measured = 48000;
+    const int warmup =
+        static_cast<int>(
+            testSampleRate * 0.5);
+
+    const int measured =
+        static_cast<int>(
+            testSampleRate * 1.0);
 
     MetalFinisherDSP dsp;
-    dsp.prepare(sampleRate);
+    dsp.prepare(testSampleRate);
     dsp.setFinish(0.0);
     dsp.setMass(1.0);
     dsp.setLowCut(0.0);
@@ -183,7 +195,7 @@ double measureMassGain(
                 2.0 * pi *
                 probeFrequency *
                 i /
-                sampleRate);
+                testSampleRate);
 
         double left = x;
         double right = x;
@@ -449,6 +461,115 @@ void verifyFiniteAcrossSampleRates() {
     }
 }
 
+double gainDb(double gain) {
+    return 20.0 *
+        std::log10(
+            std::max(
+                gain,
+                1.0e-20));
+}
+
+void verifyStaticToneShapingAcrossSampleRates() {
+    const double rates[] {
+        44100.0,
+        48000.0,
+        96000.0,
+        192000.0
+    };
+
+    const double referenceLowCut =
+        measureLowCutGain(
+            80.0,
+            80.0,
+            48000.0);
+
+    const double referenceMass140 =
+        measureMassGain(
+            140.0,
+            48000.0);
+
+    const double referenceMass220 =
+        measureMassGain(
+            220.0,
+            48000.0);
+
+    const double referenceMass1000 =
+        measureMassGain(
+            1000.0,
+            48000.0);
+
+    std::cout
+        << "Sample-rate static shaping dB (rate / lowcut80 / mass140 / mass220 / mass1000):\n";
+
+    for (const double rate : rates) {
+        const double lowCut =
+            measureLowCutGain(
+                80.0,
+                80.0,
+                rate);
+
+        const double mass140 =
+            measureMassGain(
+                140.0,
+                rate);
+
+        const double mass220 =
+            measureMassGain(
+                220.0,
+                rate);
+
+        const double mass1000 =
+            measureMassGain(
+                1000.0,
+                rate);
+
+        const double lowCutDelta =
+            gainDb(lowCut) -
+            gainDb(referenceLowCut);
+
+        const double mass140Delta =
+            gainDb(mass140) -
+            gainDb(referenceMass140);
+
+        const double mass220Delta =
+            gainDb(mass220) -
+            gainDb(referenceMass220);
+
+        const double mass1000Delta =
+            gainDb(mass1000) -
+            gainDb(referenceMass1000);
+
+        HGGF_REQUIRE(
+            std::abs(lowCutDelta) <
+            0.02);
+
+        HGGF_REQUIRE(
+            std::abs(mass140Delta) <
+            0.08);
+
+        HGGF_REQUIRE(
+            std::abs(mass220Delta) <
+            0.08);
+
+        HGGF_REQUIRE(
+            std::abs(mass1000Delta) <
+            0.08);
+
+        std::cout
+            << "  "
+            << rate
+            << " / "
+            << gainDb(lowCut)
+            << " / "
+            << gainDb(mass140)
+            << " / "
+            << gainDb(mass220)
+            << " / "
+            << gainDb(mass1000)
+            << "\n";
+    }
+}
+
 } // namespace
 
 int main() {
@@ -458,6 +579,7 @@ int main() {
     verifyFinishReenableStartsClean();
     verifyPathologicalInputSafety();
     verifyFiniteAcrossSampleRates();
+    verifyStaticToneShapingAcrossSampleRates();
 
     const double cutoff45 =
         measureLowCutGain(45.0, 45.0);

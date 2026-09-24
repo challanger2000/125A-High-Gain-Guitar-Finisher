@@ -205,9 +205,11 @@ void Processor::initializeAutomationCursors(
 
 bool Processor::applyAutomationAtSample(
     std::array<AutomationCursor, kAutomatedParameterCount>& cursors,
-    int32 sampleOffset) noexcept {
+    int32 sampleOffset,
+    bool& outputPathChanged) noexcept {
 
     bool changed = false;
+    outputPathChanged = false;
 
     for (auto& cursor : cursors) {
         while (cursor.hasNext &&
@@ -218,6 +220,11 @@ bool Processor::applyAutomationAtSample(
                 cursor.nextValue);
 
             changed = true;
+
+            if (cursor.id == kOutput ||
+                cursor.id == kBypass) {
+                outputPathChanged = true;
+            }
             ++cursor.pointIndex;
 
             if (cursor.pointIndex >=
@@ -318,33 +325,38 @@ void Processor::processBlock(
          sample < numSamples;
          ++sample) {
 
+        bool outputPathChanged = false;
+
         if (applyAutomationAtSample(
                 cursors,
-                sample)) {
-
-            const bool nextBypassed =
-                bypass_ >= 0.5;
-
-            if (nextBypassed !=
-                lastBypassed_) {
-                finisher_.reset();
-                lastBypassed_ =
-                    nextBypassed;
-            }
-
-            bypassed =
-                nextBypassed;
+                sample,
+                outputPathChanged)) {
 
             syncDSPParameters();
 
-            outputGain =
-                bypassed
-                    ? 1.0
-                    : std::pow(
-                        10.0,
-                        ((output_ * 24.0) -
-                         12.0) /
-                            20.0);
+            if (outputPathChanged) {
+                const bool nextBypassed =
+                    bypass_ >= 0.5;
+
+                if (nextBypassed !=
+                    lastBypassed_) {
+                    finisher_.reset();
+                    lastBypassed_ =
+                        nextBypassed;
+                }
+
+                bypassed =
+                    nextBypassed;
+
+                outputGain =
+                    bypassed
+                        ? 1.0
+                        : std::pow(
+                            10.0,
+                            ((output_ * 24.0) -
+                             12.0) /
+                                20.0);
+            }
         }
 
         if (!outputLeft)

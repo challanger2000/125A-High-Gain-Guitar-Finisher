@@ -32,7 +32,7 @@ SignatureResult runSignature(
     SignatureResult result;
 
     for (int i = 0;
-         i < static_cast<int>(sampleRate * 4.0);
+         i < static_cast<int>(fixtureSampleRate * 4.0);
          ++i) {
 
         const double time =
@@ -113,6 +113,9 @@ int main() {
     const auto signature960 =
         runSignature(90.0, 230.0, 3400.0, 96000.0);
 
+    const auto signature1920 =
+        runSignature(90.0, 230.0, 3400.0, 192000.0);
+
     HGGF_REQUIRE(
         std::abs(
             signature441.lowFrequency -
@@ -121,6 +124,11 @@ int main() {
     HGGF_REQUIRE(
         std::abs(
             signature960.lowFrequency -
+            signature480.lowFrequency) < 15.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature1920.lowFrequency -
             signature480.lowFrequency) < 15.0);
 
     HGGF_REQUIRE(
@@ -135,12 +143,22 @@ int main() {
 
     HGGF_REQUIRE(
         std::abs(
+            signature1920.bodyFrequency -
+            signature480.bodyFrequency) < 40.0);
+
+    HGGF_REQUIRE(
+        std::abs(
             signature441.harshFrequency -
             signature480.harshFrequency) < 250.0);
 
     HGGF_REQUIRE(
         std::abs(
             signature960.harshFrequency -
+            signature480.harshFrequency) < 250.0);
+
+    HGGF_REQUIRE(
+        std::abs(
+            signature1920.harshFrequency -
             signature480.harshFrequency) < 250.0);
 
     HGGF_REQUIRE(
@@ -153,8 +171,13 @@ int main() {
             signature960.maxLowReduction -
             signature480.maxLowReduction) < 0.08);
 
+    HGGF_REQUIRE(
+        std::abs(
+            signature1920.maxLowReduction -
+            signature480.maxLowReduction) < 0.08);
+
     std::cerr
-        << "Sample-rate signature low/body/harsh/reduction 44.1/48/96 kHz:\n"
+        << "Sample-rate signature low/body/harsh/reduction 44.1/48/96/192 kHz:\n"
         << "  44.1: "
         << signature441.lowFrequency << " / "
         << signature441.bodyFrequency << " / "
@@ -169,7 +192,12 @@ int main() {
         << signature960.lowFrequency << " / "
         << signature960.bodyFrequency << " / "
         << signature960.harshFrequency << " / "
-        << signature960.maxLowReduction << "\n";
+        << signature960.maxLowReduction << "\n"
+        << "  192: "
+        << signature1920.lowFrequency << " / "
+        << signature1920.bodyFrequency << " / "
+        << signature1920.harshFrequency << " / "
+        << signature1920.maxLowReduction << "\n";
 
     std::cout
         << "Adaptive fixture tests passed\n"

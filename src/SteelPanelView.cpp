@@ -1,322 +1,547 @@
 #include "SteelPanelView.h"
 
 #include "vstgui/lib/cdrawcontext.h"
+#include "vstgui/lib/cgradient.h"
+#include "vstgui/lib/cgraphicspath.h"
 
+#include <algorithm>
 #include <array>
+#include <cstdint>
 
 namespace HighGainGuitarFinisher {
-
 namespace {
 
-constexpr VSTGUI::CColor kBase {15, 17, 20, 255};
-constexpr VSTGUI::CColor kBaseLineA {20, 22, 26, 255};
-constexpr VSTGUI::CColor kBaseLineB {11, 13, 16, 255};
-constexpr VSTGUI::CColor kOuterFrame {66, 69, 75, 255};
-constexpr VSTGUI::CColor kInnerFrame {31, 34, 39, 255};
-constexpr VSTGUI::CColor kPlate {24, 27, 31, 255};
-constexpr VSTGUI::CColor kPlateInner {18, 20, 24, 255};
-constexpr VSTGUI::CColor kPlateTop {84, 87, 94, 150};
-constexpr VSTGUI::CColor kPlateBottom {0, 0, 0, 145};
-constexpr VSTGUI::CColor kAccent {215, 25, 32, 255};
-constexpr VSTGUI::CColor kAccentSoft {215, 25, 32, 70};
-constexpr VSTGUI::CColor kScrewOuter {8, 9, 11, 255};
-constexpr VSTGUI::CColor kScrew {119, 123, 130, 255};
-constexpr VSTGUI::CColor kScrewLight {204, 207, 212, 180};
-constexpr VSTGUI::CColor kScrewSlot {45, 48, 53, 255};
-
-void drawScrew(
+void fillRoundGradient(
     VSTGUI::CDrawContext* context,
-    double x,
-    double y) {
+    const VSTGUI::CRect& rect,
+    double radius,
+    const VSTGUI::CColor& top,
+    const VSTGUI::CColor& bottom) {
 
-    auto shadow =
-        VSTGUI::CRect(
-            x - 6.0,
-            y - 5.0,
-            x + 6.0,
-            y + 7.0);
+    auto* path =
+        context->createRoundRectGraphicsPath(
+            rect,
+            radius);
 
-    context->setFillColor(
-        kScrewOuter);
+    if (!path)
+        return;
 
-    context->drawEllipse(
-        shadow,
-        VSTGUI::kDrawFilled);
+    auto* gradient =
+        VSTGUI::CGradient::create(
+            0.0,
+            1.0,
+            top,
+            bottom);
 
-    auto body =
-        VSTGUI::CRect(
-            x - 5.0,
-            y - 5.0,
-            x + 5.0,
-            y + 5.0);
+    if (gradient) {
+        context->fillLinearGradient(
+            path,
+            *gradient,
+            {rect.left, rect.top},
+            {rect.left, rect.bottom});
 
-    context->setFillColor(kScrew);
-    context->drawEllipse(
-        body,
-        VSTGUI::kDrawFilled);
+        gradient->forget();
+    }
 
-    auto shine = body;
-    shine.inset(1.8, 1.8);
-    shine.bottom =
-        shine.top +
-        shine.getHeight() * 0.45;
-
-    context->setFillColor(
-        kScrewLight);
-
-    context->drawEllipse(
-        shine,
-        VSTGUI::kDrawFilled);
-
-    context->setFrameColor(
-        kScrewSlot);
-
-    context->setLineWidth(1.2);
-
-    context->drawLine(
-        VSTGUI::CPoint(
-            x - 2.4,
-            y + 2.4),
-        VSTGUI::CPoint(
-            x + 2.4,
-            y - 2.4));
+    path->forget();
 }
 
-void drawPlate(
+void strokeRound(
     VSTGUI::CDrawContext* context,
-    const VSTGUI::CRect& rect) {
+    const VSTGUI::CRect& rect,
+    double radius,
+    const VSTGUI::CColor& color,
+    double width) {
 
-    context->setFillColor(
-        kPlateBottom);
+    auto* path =
+        context->createRoundRectGraphicsPath(
+            rect,
+            radius);
 
-    auto shadow = rect;
-    shadow.offset(0.0, 4.0);
+    if (!path)
+        return;
 
-    context->drawRect(
-        shadow,
-        VSTGUI::kDrawFilled);
+    context->setFrameColor(color);
+    context->setLineWidth(width);
 
-    context->setFillColor(
-        kPlate);
+    context->drawGraphicsPath(
+        path,
+        VSTGUI::CDrawContext::kPathStroked);
 
-    context->setFrameColor(
-        kOuterFrame);
-
-    context->setLineWidth(1.0);
-
-    context->drawRect(
-        rect,
-        VSTGUI::kDrawFilledAndStroked);
-
-    auto inner = rect;
-    inner.inset(5.0, 5.0);
-
-    context->setFillColor(
-        kPlateInner);
-
-    context->setFrameColor(
-        kInnerFrame);
-
-    context->drawRect(
-        inner,
-        VSTGUI::kDrawFilledAndStroked);
-
-    context->setFrameColor(
-        kPlateTop);
-
-    context->drawLine(
-        VSTGUI::CPoint(
-            rect.left + 1.0,
-            rect.top + 1.0),
-        VSTGUI::CPoint(
-            rect.right - 1.0,
-            rect.top + 1.0));
+    path->forget();
 }
 
+void fillRadialEllipse(
+    VSTGUI::CDrawContext* context,
+    const VSTGUI::CRect& rect,
+    const VSTGUI::CColor& inner,
+    const VSTGUI::CColor& outer,
+    const VSTGUI::CPoint& offset) {
+
+    auto* path =
+        context->createGraphicsPath();
+
+    if (!path)
+        return;
+
+    path->addEllipse(rect);
+
+    auto* gradient =
+        VSTGUI::CGradient::create(
+            0.0,
+            1.0,
+            inner,
+            outer);
+
+    if (gradient) {
+        context->fillRadialGradient(
+            path,
+            *gradient,
+            rect.getCenter(),
+            std::max(
+                rect.getWidth(),
+                rect.getHeight()) * 0.52,
+            offset);
+
+        gradient->forget();
+    }
+
+    path->forget();
 }
+
+} // namespace
 
 SteelPanelView::SteelPanelView(
     const VSTGUI::CRect& size)
 : VSTGUI::CView(size) {
-
     setMouseEnabled(false);
-    setTransparency(false);
+}
+
+SteelPanelView::SteelPanelView(
+    const SteelPanelView& other)
+: VSTGUI::CView(other) {
 }
 
 void SteelPanelView::draw(
     VSTGUI::CDrawContext* context) {
 
-    const auto r =
-        getViewSize();
+    const auto r = getViewSize();
+    const double ox = r.left;
+    const double oy = r.top;
+
+    const auto rect =
+        [&](double x,
+            double y,
+            double w,
+            double h) {
+            return VSTGUI::CRect(
+                ox + x,
+                oy + y,
+                ox + x + w,
+                oy + y + h);
+        };
+
+    const auto line =
+        [&](double x1,
+            double y1,
+            double x2,
+            double y2,
+            const VSTGUI::CColor& color,
+            double width = 1.0) {
+
+            context->setFrameColor(color);
+            context->setLineWidth(width);
+            context->drawLine(
+                {ox + x1, oy + y1},
+                {ox + x2, oy + y2});
+        };
+
+    const auto raised =
+        [&](double x,
+            double y,
+            double w,
+            double h,
+            double radius,
+            bool accent) {
+
+            const auto shadow =
+                rect(
+                    x + 1.0,
+                    y + 4.0,
+                    w,
+                    h);
+
+            fillRoundGradient(
+                context,
+                shadow,
+                radius,
+                {0, 0, 0, 135},
+                {0, 0, 0, 225});
+
+            const auto rr =
+                rect(x, y, w, h);
+
+            fillRoundGradient(
+                context,
+                rr,
+                radius,
+                accent
+                    ? VSTGUI::CColor{34, 35, 48, 255}
+                    : VSTGUI::CColor{36, 40, 47, 255},
+                {13, 15, 20, 255});
+
+            strokeRound(
+                context,
+                rr,
+                radius,
+                accent
+                    ? VSTGUI::CColor{118, 104, 255, 82}
+                    : VSTGUI::CColor{88, 95, 106, 126},
+                1.0);
+
+            auto inner = rr;
+            inner.inset(2.0, 2.0);
+
+            strokeRound(
+                context,
+                inner,
+                std::max(
+                    2.0,
+                    radius - 2.0),
+                {255, 255, 255, 16},
+                1.0);
+
+            line(
+                x + 10.0,
+                y + 9.0,
+                x + w - 10.0,
+                y + 9.0,
+                accent
+                    ? VSTGUI::CColor{142, 128, 255, 52}
+                    : VSTGUI::CColor{220, 224, 232, 24},
+                accent ? 1.5 : 1.0);
+        };
+
+    const auto well =
+        [&](double x,
+            double y,
+            double w,
+            double h,
+            double radius) {
+
+            const auto shadow =
+                rect(
+                    x,
+                    y + 2.0,
+                    w,
+                    h);
+
+            fillRoundGradient(
+                context,
+                shadow,
+                radius,
+                {0, 0, 0, 185},
+                {0, 0, 0, 245});
+
+            const auto rr =
+                rect(x, y, w, h);
+
+            fillRoundGradient(
+                context,
+                rr,
+                radius,
+                {7, 9, 13, 255},
+                {17, 20, 26, 255});
+
+            strokeRound(
+                context,
+                rr,
+                radius,
+                {70, 77, 88, 145},
+                1.0);
+
+            line(
+                x + radius,
+                y + 1.0,
+                x + w - radius,
+                y + 1.0,
+                {0, 0, 0, 205},
+                1.0);
+
+            // Very soft lower reflection makes the recess read as dark glass
+            // instead of another flat painted rectangle.
+            line(
+                x + radius + 2.0,
+                y + h - 2.0,
+                x + w - radius - 2.0,
+                y + h - 2.0,
+                {210, 218, 232, 16},
+                1.0);
+        };
+
+    const auto screw =
+        [&](double x,
+            double y) {
+
+            const auto sr =
+                rect(
+                    x - 3.5,
+                    y - 3.5,
+                    7.0,
+                    7.0);
+
+            fillRadialEllipse(
+                context,
+                sr,
+                {112, 118, 128, 255},
+                {16, 18, 22, 255},
+                {-1.5, -1.5});
+
+            context->setFrameColor(
+                {3, 4, 6, 255});
+
+            context->setLineWidth(1.0);
+
+            context->drawEllipse(
+                sr,
+                VSTGUI::kDrawStroked);
+
+            line(
+                x - 1.6,
+                y,
+                x + 1.6,
+                y,
+                {4, 5, 7, 235},
+                1.0);
+        };
 
     context->setDrawMode(
         VSTGUI::kAntiAliasing);
 
-    context->setFillColor(kBase);
+    // Outer chassis.
+    context->setFillColor(
+        {5, 7, 10, 255});
+
     context->drawRect(
         r,
         VSTGUI::kDrawFilled);
 
-    for (double y =
-             r.top + 1.0;
-         y <
-             r.bottom;
-         y += 3.0) {
+    auto chassis = r;
+    chassis.inset(
+        9.0,
+        9.0);
 
-        context->setFrameColor(
-            static_cast<int>(y) % 2 == 0
-                ? kBaseLineA
-                : kBaseLineB);
+    fillRoundGradient(
+        context,
+        chassis,
+        16.0,
+        {43, 47, 55, 255},
+        {11, 13, 18, 255});
 
-        context->setLineWidth(1.0);
+    strokeRound(
+        context,
+        chassis,
+        16.0,
+        {1, 2, 4, 255},
+        2.0);
 
-        context->drawLine(
-            VSTGUI::CPoint(
-                r.left,
-                y),
-            VSTGUI::CPoint(
-                r.right,
-                y));
-    }
+    auto inner = chassis;
+    inner.inset(
+        4.0,
+        4.0);
 
-    auto outer = r;
-    outer.inset(
-        8.0,
-        8.0);
-
-    context->setFrameColor(
-        kOuterFrame);
-
-    context->setLineWidth(
+    strokeRound(
+        context,
+        inner,
+        13.0,
+        {185, 191, 201, 33},
         1.0);
 
-    context->drawRect(
-        outer,
-        VSTGUI::kDrawStroked);
+    // Restrained brushed-anodised texture.
+    for (int y = 17;
+         y < 602;
+         y += 4) {
 
-    auto inner = outer;
-    inner.inset(
-        7.0,
-        7.0);
+        const auto alpha =
+            static_cast<uint8_t>(
+                (y % 16 == 1)
+                    ? 10
+                    : 4);
 
-    context->setFrameColor(
-        kInnerFrame);
-
-    context->drawRect(
-        inner,
-        VSTGUI::kDrawStroked);
-
-    auto header =
-        VSTGUI::CRect(
-            25.0,
-            22.0,
-            735.0,
-            94.0);
-
-    drawPlate(
-        context,
-        header);
-
-    drawPlate(
-        context,
-        VSTGUI::CRect(
-            34.0,
-            112.0,
-            184.0,
-            395.0));
-
-    drawPlate(
-        context,
-        VSTGUI::CRect(
-            203.0,
-            112.0,
-            458.0,
-            395.0));
-
-    drawPlate(
-        context,
-        VSTGUI::CRect(
-            477.0,
-            112.0,
-            726.0,
-            395.0));
-
-    context->setFillColor(
-        kAccentSoft);
-
-    context->drawRect(
-        VSTGUI::CRect(
-            217.0,
-            143.0,
-            444.0,
-            147.0),
-        VSTGUI::kDrawFilled);
-
-    context->setFillColor(
-        kAccent);
-
-    context->drawRect(
-        VSTGUI::CRect(
-            217.0,
-            143.0,
-            331.0,
-            147.0),
-        VSTGUI::kDrawFilled);
-
-    const std::array<double, 5>
-        roomLines {
-            0.0,
-            12.0,
-            24.0,
-            36.0,
-            48.0
-        };
-
-    for (std::size_t i = 0;
-         i < roomLines.size();
-         ++i) {
-
-        const double inset =
-            static_cast<double>(i) *
-            8.0;
-
-        context->setFrameColor(
-            i == 0
-                ? kAccentSoft
-                : kInnerFrame);
-
-        context->setLineWidth(1.0);
-
-        context->drawLine(
-            VSTGUI::CPoint(
-                507.0 + inset,
-                314.0 +
-                    roomLines[i] * 0.30),
-            VSTGUI::CPoint(
-                696.0 - inset,
-                314.0 +
-                    roomLines[i] * 0.30));
+        line(
+            14.0,
+            static_cast<double>(y),
+            1106.0,
+            static_cast<double>(y),
+            {196, 201, 210, alpha},
+            1.0);
     }
 
-    drawScrew(
-        context,
-        20.0,
-        20.0);
+    line(
+        22,
+        16,
+        1098,
+        16,
+        {235, 238, 244, 34},
+        1.0);
 
-    drawScrew(
-        context,
-        740.0,
-        20.0);
+    line(
+        22,
+        602,
+        1098,
+        602,
+        {0, 0, 0, 210},
+        1.0);
 
-    drawScrew(
-        context,
-        20.0,
-        410.0);
+    // Header / navigation bridge.
+    raised(
+        28,
+        22,
+        1064,
+        80,
+        12.0,
+        false);
 
-    drawScrew(
-        context,
-        740.0,
-        410.0);
+    raised(
+        46,
+        112,
+        1028,
+        158,
+        12.0,
+        false);
+
+    // Main hardware bays.
+    raised(
+        54,
+        296,
+        230,
+        238,
+        12.0,
+        false);
+
+    raised(
+        304,
+        296,
+        300,
+        238,
+        12.0,
+        true);
+
+    raised(
+        624,
+        296,
+        270,
+        238,
+        12.0,
+        false);
+
+    raised(
+        914,
+        296,
+        152,
+        238,
+        12.0,
+        false);
+
+    // Real recessed value/status wells.
+    well(
+        727,
+        194,
+        343,
+        67,
+        11.0);
+
+    well(
+        113,
+        486,
+        112,
+        30,
+        8.0);
+
+    well(
+        403,
+        506,
+        102,
+        30,
+        9.0);
+
+    well(
+        654,
+        485,
+        96,
+        28,
+        8.0);
+
+    well(
+        768,
+        485,
+        96,
+        28,
+        8.0);
+
+    well(
+        942,
+        486,
+        96,
+        30,
+        8.0);
+
+    // Accent datum lines: enough identity without neon.
+    line(
+        48,
+        106,
+        1072,
+        106,
+        {118, 104, 255, 78},
+        1.3);
+
+    line(
+        307,
+        300,
+        601,
+        300,
+        {134, 120, 255, 110},
+        1.5);
+
+    line(
+        54,
+        550,
+        1066,
+        550,
+        {144, 150, 160, 38},
+        1.0);
+
+    // Hardware fastening follows one consistent mechanical rule:
+    // chassis corners plus four fasteners on every lower module.
+    const std::array<VSTGUI::CPoint, 20> screws {{
+        {22, 22},
+        {1098, 22},
+        {22, 598},
+        {1098, 598},
+
+        {66, 308},
+        {272, 308},
+        {66, 522},
+        {272, 522},
+
+        {316, 308},
+        {592, 308},
+        {316, 522},
+        {592, 522},
+
+        {636, 308},
+        {882, 308},
+        {636, 522},
+        {882, 522},
+
+        {926, 308},
+        {1054, 308},
+        {926, 522},
+        {1054, 522}
+    }};
+
+    for (const auto& p : screws)
+        screw(p.x, p.y);
 
     setDirty(false);
 }

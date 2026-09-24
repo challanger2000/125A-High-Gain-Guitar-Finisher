@@ -489,8 +489,21 @@ void MetalFinisherDSP::processFrame(
         roomLeft,
         roomRight);
 
-    left = processedLeft + roomLeft;
-    right = processedRight + roomRight;
+    const double roomMix =
+        std::clamp(
+            room_.currentWetDry(),
+            0.0,
+            1.0);
+
+    left =
+        processedLeft +
+        (roomLeft - processedLeft) *
+            roomMix;
+
+    right =
+        processedRight +
+        (roomRight - processedRight) *
+            roomMix;
 
     if (!std::isfinite(left))
         left = 0.0;

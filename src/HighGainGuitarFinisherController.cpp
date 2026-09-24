@@ -385,11 +385,11 @@ IPlugView* PLUGIN_API Controller::createView(
     editor->
         setEditorSizeConstrains(
             VSTGUI::CPoint(
-                760.0,
-                430.0),
+                1120.0,
+                620.0),
             VSTGUI::CPoint(
-                760.0,
-                430.0));
+                1120.0,
+                620.0));
 
     editor_ =
         editor;

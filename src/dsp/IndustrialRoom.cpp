@@ -524,14 +524,10 @@ void IndustrialRoom::processFrame(
         1.0 -
         0.32 * duckActivity;
 
-    const double wetCurve =
-        std::pow(
-            std::max(wet_, 0.0),
-            1.10);
-
+    // The ROOM control is a true dry/wet mix at the parent DSP level.
+    // Generate the full wet return here; the parent crossfades 0..100%.
     const double wetGain =
         0.55 *
-        wetCurve *
         duckGain_;
 
     wetLeft =

@@ -4,10 +4,14 @@
 
 namespace HighGainGuitarFinisher {
 
-class SteelPanelView final : public VSTGUI::CView {
+class SteelPanelView final :
+    public VSTGUI::CView {
 public:
     explicit SteelPanelView(
         const VSTGUI::CRect& size);
+
+    SteelPanelView(
+        const SteelPanelView& other);
 
     void draw(
         VSTGUI::CDrawContext* context) override;

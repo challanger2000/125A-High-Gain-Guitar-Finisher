@@ -1,35 +1,79 @@
 #include "SteelKnob.h"
 
 #include "vstgui/lib/cdrawcontext.h"
+#include "vstgui/lib/cgradient.h"
+#include "vstgui/lib/cgraphicspath.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace HighGainGuitarFinisher {
-
 namespace {
 
-constexpr VSTGUI::CColor kShadow {0, 0, 0, 155};
-constexpr VSTGUI::CColor kBezelOuter {45, 48, 54, 255};
-constexpr VSTGUI::CColor kBezelMid {125, 129, 137, 255};
-constexpr VSTGUI::CColor kBezelLight {210, 212, 216, 255};
-constexpr VSTGUI::CColor kKnobOuter {24, 27, 31, 255};
-constexpr VSTGUI::CColor kKnobInner {42, 45, 51, 255};
-constexpr VSTGUI::CColor kKnobHighlight {86, 90, 98, 150};
-constexpr VSTGUI::CColor kMarker {242, 243, 245, 255};
-constexpr VSTGUI::CColor kTick {107, 111, 119, 210};
-constexpr VSTGUI::CColor kAccent {215, 25, 32, 255};
-constexpr VSTGUI::CColor kAccentDark {121, 13, 19, 255};
+constexpr VSTGUI::CColor kAccent {
+    118, 104, 255, 255
+};
+
+constexpr VSTGUI::CColor kAccentGlow {
+    118, 104, 255, 70
+};
+
+constexpr VSTGUI::CColor kMarker {
+    236, 239, 244, 255
+};
+
+constexpr VSTGUI::CColor kTick {
+    158, 165, 177, 150
+};
 
 constexpr double kPi =
-    3.141592653589793238462643383279502884;
+    3.14159265358979323846;
 
+void fillRadialEllipse(
+    VSTGUI::CDrawContext* context,
+    const VSTGUI::CRect& rect,
+    const VSTGUI::CColor& inner,
+    const VSTGUI::CColor& outer,
+    const VSTGUI::CPoint& offset) {
+
+    auto* path =
+        context->createGraphicsPath();
+
+    if (!path)
+        return;
+
+    path->addEllipse(rect);
+
+    auto* gradient =
+        VSTGUI::CGradient::create(
+            0.0,
+            1.0,
+            inner,
+            outer);
+
+    if (gradient) {
+        context->fillRadialGradient(
+            path,
+            *gradient,
+            rect.getCenter(),
+            std::max(
+                rect.getWidth(),
+                rect.getHeight()) * 0.52,
+            offset);
+
+        gradient->forget();
+    }
+
+    path->forget();
 }
+
+} // namespace
 
 SteelKnob::SteelKnob(
     const VSTGUI::CRect& size,
     VSTGUI::IControlListener* listener,
-    int32_t tag,
+    std::int32_t tag,
     Style style)
 : VSTGUI::CKnob(
       size,
@@ -41,11 +85,13 @@ SteelKnob::SteelKnob(
 
     setStartAngle(
         static_cast<float>(
-            135.0 / 180.0 * kPi));
+            135.0 / 180.0 *
+            kPi));
 
     setRangeAngle(
         static_cast<float>(
-            270.0 / 180.0 * kPi));
+            270.0 / 180.0 *
+            kPi));
 
     setWantsFocus(true);
     setTransparency(true);
@@ -54,8 +100,12 @@ SteelKnob::SteelKnob(
 void SteelKnob::draw(
     VSTGUI::CDrawContext* context) {
 
-    const auto r = getViewSize();
-    const auto center = r.getCenter();
+    const auto r =
+        getViewSize();
+
+    const auto center =
+        r.getCenter();
+
     const auto minDim =
         std::min(
             r.getWidth(),
@@ -64,252 +114,306 @@ void SteelKnob::draw(
     const bool hero =
         style_ == Style::Hero;
 
-    context->setDrawMode(
-        VSTGUI::kAntiAliasing);
-
-    const double normalizedValue =
+    const auto normalized =
         std::clamp(
             static_cast<double>(
                 getValueNormalized()),
             0.0,
             1.0);
 
-    const auto outerRadius =
-        minDim * (hero ? 0.435 : 0.420);
+    const auto radius =
+        minDim *
+        (hero ? 0.365 : 0.355);
 
-    auto shadow = VSTGUI::CRect(
-        center.x - outerRadius,
-        center.y - outerRadius + (hero ? 7.0 : 5.0),
-        center.x + outerRadius,
-        center.y + outerRadius + (hero ? 7.0 : 5.0));
+    const auto angle =
+        (135.0 +
+         normalized * 270.0) *
+        kPi / 180.0;
 
-    context->setFillColor(kShadow);
-    context->drawEllipse(
-        shadow,
-        VSTGUI::kDrawFilled);
+    context->setDrawMode(
+        VSTGUI::kAntiAliasing);
 
-    auto outer = VSTGUI::CRect(
-        center.x - outerRadius,
-        center.y - outerRadius,
-        center.x + outerRadius,
-        center.y + outerRadius);
+    // Scale ticks sit outside the hardware body.
+    const int ticks =
+        hero ? 13 : 11;
 
-    context->setFillColor(kBezelOuter);
-    context->drawEllipse(
-        outer,
-        VSTGUI::kDrawFilled);
+    for (int i = 0;
+         i < ticks;
+         ++i) {
 
-    const auto bezelRadius =
-        outerRadius * 0.91;
+        const auto t =
+            static_cast<double>(i) /
+            static_cast<double>(
+                ticks - 1);
 
-    auto bezel = VSTGUI::CRect(
-        center.x - bezelRadius,
-        center.y - bezelRadius,
-        center.x + bezelRadius,
-        center.y + bezelRadius);
+        const auto a =
+            (135.0 +
+             270.0 * t) *
+            kPi / 180.0;
 
-    context->setFillColor(kBezelMid);
-    context->drawEllipse(
-        bezel,
-        VSTGUI::kDrawFilled);
+        const bool datum =
+            i == 0 ||
+            i == ticks - 1 ||
+            i == (ticks - 1) / 2;
 
-    const auto lightRadius =
-        outerRadius * 0.84;
+        const auto ro =
+            radius +
+            (hero ? 17.0 : 12.0);
 
-    auto lightRing = VSTGUI::CRect(
-        center.x - lightRadius,
-        center.y - lightRadius,
-        center.x + lightRadius,
-        center.y + lightRadius);
+        const auto ri =
+            radius +
+            (datum
+                ? (hero ? 8.0 : 6.0)
+                : (hero ? 11.0 : 8.5));
 
-    context->setFillColor(kBezelLight);
-    context->drawEllipse(
-        lightRing,
-        VSTGUI::kDrawFilled);
+        context->setFrameColor(
+            datum
+                ? VSTGUI::CColor{
+                    224, 228, 235, 205
+                  }
+                : kTick);
 
-    const auto bodyRadius =
-        outerRadius * 0.77;
+        context->setLineWidth(
+            datum
+                ? (hero ? 1.7 : 1.4)
+                : 1.0);
 
-    auto body = VSTGUI::CRect(
-        center.x - bodyRadius,
-        center.y - bodyRadius,
-        center.x + bodyRadius,
-        center.y + bodyRadius);
+        context->drawLine(
+            {
+                center.x +
+                    std::cos(a) * ri,
+                center.y +
+                    std::sin(a) * ri
+            },
+            {
+                center.x +
+                    std::cos(a) * ro,
+                center.y +
+                    std::sin(a) * ro
+            });
+    }
 
-    context->setFillColor(kKnobOuter);
-    context->drawEllipse(
-        body,
-        VSTGUI::kDrawFilled);
-
-    const auto innerRadius =
-        bodyRadius * 0.88;
-
-    auto inner = VSTGUI::CRect(
-        center.x - innerRadius,
-        center.y - innerRadius,
-        center.x + innerRadius,
-        center.y + innerRadius);
-
-    context->setFillColor(kKnobInner);
-    context->drawEllipse(
-        inner,
-        VSTGUI::kDrawFilled);
-
-    auto highlight = inner;
-    highlight.inset(
-        innerRadius * 0.10,
-        innerRadius * 0.10);
-
-    highlight.bottom =
-        highlight.top +
-        highlight.getHeight() * 0.42;
-
+    // Contact shadow: gives real physical separation from the faceplate.
     context->setFillColor(
-        kKnobHighlight);
+        {0, 0, 0, static_cast<uint8_t>(hero ? 145 : 120)});
 
     context->drawEllipse(
-        highlight,
+        {
+            center.x - radius - 8.0,
+            center.y - radius - 2.0,
+            center.x + radius + 8.0,
+            center.y + radius + 12.0
+        },
         VSTGUI::kDrawFilled);
 
+    // Hero arc has a controlled halo beneath the crisp value arc.
     const auto arcRadius =
-        outerRadius * 1.08;
+        radius +
+        (hero ? 12.0 : 8.0);
 
-    auto arc = VSTGUI::CRect(
+    const VSTGUI::CRect arcRect(
         center.x - arcRadius,
         center.y - arcRadius,
         center.x + arcRadius,
         center.y + arcRadius);
 
-    context->setFrameColor(
-        kAccentDark);
+    if (hero &&
+        normalized > 0.001) {
 
-    context->setLineWidth(
-        hero ? 7.0 : 4.0);
+        context->setFrameColor(
+            kAccentGlow);
 
-    context->drawArc(
-        arc,
-        135.f,
-        405.f);
+        context->setLineWidth(10.0);
+
+        context->drawArc(
+            arcRect,
+            135.f,
+            static_cast<float>(
+                135.0 +
+                normalized * 270.0));
+    }
 
     context->setFrameColor(
         kAccent);
 
     context->setLineWidth(
-        hero ? 7.0 : 4.0);
+        hero ? 4.0 : 2.8);
 
     context->drawArc(
-        arc,
+        arcRect,
         135.f,
         static_cast<float>(
             135.0 +
-            normalizedValue * 270.0));
+            normalized * 270.0));
 
-    const int tickCount =
-        hero ? 13 : 9;
+    // Machined steel skirt.
+    const VSTGUI::CRect skirt(
+        center.x - radius - 4.0,
+        center.y - radius - 4.0,
+        center.x + radius + 4.0,
+        center.y + radius + 4.0);
 
-    context->setFrameColor(kTick);
-    context->setLineWidth(
-        hero ? 1.5 : 1.0);
-
-    for (int tick = 0;
-         tick < tickCount;
-         ++tick) {
-
-        const double normalized =
-            tickCount > 1
-                ? static_cast<double>(tick) /
-                    static_cast<double>(
-                        tickCount - 1)
-                : 0.0;
-
-        const double angle =
-            (135.0 +
-             normalized * 270.0) *
-            kPi /
-            180.0;
-
-        const double innerTick =
-            arcRadius * 1.08;
-
-        const double outerTick =
-            arcRadius *
-            (hero ? 1.17 : 1.14);
-
-        const VSTGUI::CPoint p1(
-            center.x +
-                std::cos(angle) *
-                    innerTick,
-            center.y +
-                std::sin(angle) *
-                    innerTick);
-
-        const VSTGUI::CPoint p2(
-            center.x +
-                std::cos(angle) *
-                    outerTick,
-            center.y +
-                std::sin(angle) *
-                    outerTick);
-
-        context->drawLine(
-            p1,
-            p2);
-    }
-
-    const double angle =
-        (135.0 +
-         normalizedValue * 270.0) *
-        kPi /
-        180.0;
-
-    const double markerInner =
-        bodyRadius *
-        (hero ? 0.18 : 0.22);
-
-    const double markerOuter =
-        bodyRadius * 0.70;
-
-    const VSTGUI::CPoint p1(
-        center.x +
-            std::cos(angle) *
-                markerInner,
-        center.y +
-            std::sin(angle) *
-                markerInner);
-
-    const VSTGUI::CPoint p2(
-        center.x +
-            std::cos(angle) *
-                markerOuter,
-        center.y +
-            std::sin(angle) *
-                markerOuter);
+    fillRadialEllipse(
+        context,
+        skirt,
+        {172, 178, 188, 255},
+        {31, 35, 42, 255},
+        {
+            -radius * 0.28,
+            -radius * 0.31
+        });
 
     context->setFrameColor(
-        kMarker);
+        {4, 5, 7, 255});
 
     context->setLineWidth(
-        hero ? 5.0 : 3.2);
+        hero ? 1.6 : 1.2);
 
-    context->drawLine(
-        p1,
-        p2);
+    context->drawEllipse(
+        skirt,
+        VSTGUI::kDrawStroked);
 
-    const double capRadius =
-        bodyRadius * 0.12;
+    auto skirtInner =
+        skirt;
 
-    auto cap = VSTGUI::CRect(
+    skirtInner.inset(
+        4.0,
+        4.0);
+
+    context->setFrameColor(
+        {230, 233, 239, 48});
+
+    context->setLineWidth(1.0);
+
+    context->drawEllipse(
+        skirtInner,
+        VSTGUI::kDrawStroked);
+
+    // Deep graphite cap with off-axis highlight.
+    const auto capRadius =
+        radius *
+        (hero ? 0.72 : 0.70);
+
+    const VSTGUI::CRect cap(
         center.x - capRadius,
         center.y - capRadius,
         center.x + capRadius,
         center.y + capRadius);
 
-    context->setFillColor(
-        kBezelMid);
+    fillRadialEllipse(
+        context,
+        cap,
+        hero
+            ? VSTGUI::CColor{
+                78, 82, 91, 255
+              }
+            : VSTGUI::CColor{
+                70, 74, 82, 255
+              },
+        {11, 13, 17, 255},
+        {
+            -capRadius * 0.32,
+            -capRadius * 0.36
+        });
+
+    context->setFrameColor(
+        {3, 4, 6, 255});
+
+    context->setLineWidth(1.0);
 
     context->drawEllipse(
         cap,
+        VSTGUI::kDrawStroked);
+
+    // Restrained specular crescent: material cue, not decoration.
+    const auto highlightRadius =
+        capRadius * 0.78;
+
+    VSTGUI::CRect highlight(
+        center.x - highlightRadius,
+        center.y - highlightRadius,
+        center.x + highlightRadius,
+        center.y + highlightRadius);
+
+    context->setFrameColor(
+        {255, 255, 255, static_cast<uint8_t>(hero ? 58 : 42)});
+
+    context->setLineWidth(
+        hero ? 1.5 : 1.2);
+
+    context->drawArc(
+        highlight,
+        205.f,
+        315.f);
+
+    // Ivory index line plus tiny illuminated tip.
+    const auto p1Radius =
+        capRadius * 0.20;
+
+    const auto p2Radius =
+        radius * 0.80;
+
+    const VSTGUI::CPoint p1(
+        center.x +
+            std::cos(angle) *
+            p1Radius,
+        center.y +
+            std::sin(angle) *
+            p1Radius);
+
+    const VSTGUI::CPoint p2(
+        center.x +
+            std::cos(angle) *
+            p2Radius,
+        center.y +
+            std::sin(angle) *
+            p2Radius);
+
+    context->setFrameColor(
+        kMarker);
+
+    context->setLineWidth(
+        hero ? 3.0 : 2.2);
+
+    context->drawLine(
+        p1,
+        p2);
+
+    const auto tip =
+        hero ? 2.5 : 1.9;
+
+    context->setFillColor(
+        {184, 176, 255, 255});
+
+    context->drawEllipse(
+        {
+            p2.x - tip,
+            p2.y - tip,
+            p2.x + tip,
+            p2.y + tip
+        },
         VSTGUI::kDrawFilled);
+
+    // Small hub completes the physical control without a decorative cap.
+    const auto hub =
+        hero ? 4.6 : 3.6;
+
+    context->setFillColor(
+        {12, 14, 18, 255});
+
+    context->setFrameColor(
+        {128, 134, 144, 190});
+
+    context->setLineWidth(1.0);
+
+    context->drawEllipse(
+        {
+            center.x - hub,
+            center.y - hub,
+            center.x + hub,
+            center.y + hub
+        },
+        VSTGUI::kDrawFilledAndStroked);
 
     setDirty(false);
 }

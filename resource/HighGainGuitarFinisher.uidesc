@@ -1,371 +1,79 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <vstgui-ui-description version="1">
   <colors>
-    <color name="Transparent" rgba="#00000000"/>
-    <color name="Text" rgba="#F1F2F4FF"/>
-    <color name="Muted" rgba="#A3A8B0FF"/>
-    <color name="Minor" rgba="#777D87FF"/>
-    <color name="Value" rgba="#D9DADDFF"/>
-    <color name="Accent" rgba="#D71920FF"/>
-    <color name="AccentDark" rgba="#790D13FF"/>
-    <color name="SwitchBack" rgba="#111318FF"/>
-    <color name="SwitchFrame" rgba="#4A4E56FF"/>
+    <color name="Background" rgba="#0E1014FF"/>
+    <color name="Text" rgba="#F1F3F6FF"/>
+    <color name="Muted" rgba="#9EA5B1FF"/>
+    <color name="Minor" rgba="#747D8BFF"/>
+    <color name="Value" rgba="#C8CDD6FF"/>
+    <color name="Accent" rgba="#7668FFFF"/>
+    <color name="SwitchFrame" rgba="#3A3F4AFF"/>
   </colors>
   <fonts>
-    <font name="Title" font-name="Arial" size="22" bold="true" italic="false"/>
-    <font name="Subtitle" font-name="Arial" size="9" bold="true" italic="false"/>
+    <font name="Title" font-name="Arial" size="25" bold="true" italic="false"/>
+    <font name="Subtitle" font-name="Arial" size="11" bold="false" italic="false"/>
     <font name="Section" font-name="Arial" size="12" bold="true" italic="false"/>
-    <font name="Label" font-name="Arial" size="11" bold="true" italic="false"/>
-    <font name="ValueFont" font-name="Arial" size="11" bold="false" italic="false"/>
-    <font name="MinorFont" font-name="Arial" size="9" bold="false" italic="false"/>
+    <font name="Label" font-name="Arial" size="12" bold="true" italic="false"/>
+    <font name="ValueFont" font-name="Arial" size="12" bold="false" italic="false"/>
+    <font name="Small" font-name="Arial" size="10" bold="false" italic="false"/>
     <font name="SwitchFont" font-name="Arial" size="10" bold="true" italic="false"/>
   </fonts>
   <gradients>
     <gradient name="SwitchNormal">
-      <color-stop rgba="#111318FF" start="0"/>
-      <color-stop rgba="#1E2126FF" start="1"/>
+      <color-stop rgba="#252A32FF" start="0"/>
+      <color-stop rgba="#0B0E13FF" start="1"/>
     </gradient>
     <gradient name="SwitchSelected">
-      <color-stop rgba="#8B1117FF" start="0"/>
-      <color-stop rgba="#D71920FF" start="1"/>
+      <color-stop rgba="#8A7CFFFF" start="0"/>
+      <color-stop rgba="#4E43B8FF" start="1"/>
     </gradient>
   </gradients>
-  <template name="view"
-            class="CViewContainer"
-            origin="0,0"
-            size="760,430"
-            transparent="false">
-    <view class="CView"
-          custom-view-name="HGGFPanel"
-          origin="0,0"
-          size="760,430"
-          mouse-enabled="false"/>
 
-    <view class="CView"
-          custom-view-name="HGGFBrandLogo"
-          origin="42,28"
-          size="124,62"
-          mouse-enabled="false"/>
+  <template name="view" class="CViewContainer" origin="0,0" size="1120,620" transparent="false" background-color="Background">
+    <view class="CView" custom-view-name="HGGFPanel" origin="0,0" size="1120,620" mouse-enabled="false"/>
 
-    <view class="CTextLabel"
-          origin="208,34"
-          size="360,30"
-          title="HIGH GAIN GUITAR FINISHER"
-          transparent="true"
-          font-color="Text"
-          font="Title"
-          text-alignment="center"
-          mouse-enabled="false"/>
+    <view class="CView" custom-view-name="HGGFBrandLogo" origin="55,29" size="120,60" mouse-enabled="false"/>
+    <view class="CTextLabel" origin="250,29" size="620,38" title="H I G H   G A I N   G U I T A R   F I N I S H E R" transparent="true" font-color="Text" font="Title" text-alignment="center" mouse-enabled="false"/>
+    <view class="CTextLabel" origin="360,66" size="400,18" title="POST-AMP / POST-CAB FINISHING PROCESSOR" transparent="true" font-color="Muted" font="Subtitle" text-alignment="center" mouse-enabled="false"/>
 
-    <view class="CTextLabel"
-          origin="233,66"
-          size="310,14"
-          title="POST-AMP / POST-CAB"
-          transparent="true"
-          font-color="Muted"
-          font="Subtitle"
-          text-alignment="center"
-          mouse-enabled="false"/>
+    <view class="CSegmentButton" origin="906,34" size="118,28" control-tag="9000" style="horizontal" segment-names="100%,150%" font="SwitchFont" text-color="Muted" text-color-highlighted="Text" gradient="SwitchNormal" gradient-highlighted="SwitchSelected" frame-color="SwitchFrame" frame-width="1" round-radius="14"/>
+    <view class="CSegmentButton" origin="906,68" size="118,28" control-tag="103" style="horizontal" segment-names="ACTIVE,BYPASS" font="SwitchFont" text-color="Muted" text-color-highlighted="Text" gradient="SwitchNormal" gradient-highlighted="SwitchSelected" frame-color="SwitchFrame" frame-width="1" round-radius="14"/>
 
-    <view class="CSegmentButton"
-          origin="625,44"
-          size="90,24"
-          control-tag="9000"
-          style="horizontal"
-          segment-names="100%,150%"
-          font="SwitchFont"
-          text-color="Muted"
-          text-color-highlighted="Text"
-          gradient="SwitchNormal"
-          gradient-highlighted="SwitchSelected"
-          frame-color="SwitchFrame"
-          frame-width="1"
-          round-radius="12"/>
+    <view class="CTextLabel" origin="54,128" size="180,18" title="FINISH CHARACTER" transparent="true" font-color="Muted" font="Section" text-alignment="left" mouse-enabled="false"/>
+    <view class="CSegmentButton" origin="54,154" size="580,42" control-tag="106" style="horizontal" segment-names="1 OPEN,2 BITE,3 SMOOTH" font="SwitchFont" text-color="Muted" text-color-highlighted="Text" gradient="SwitchNormal" gradient-highlighted="SwitchSelected" frame-color="SwitchFrame" frame-width="1" round-radius="9"/>
 
-    <view class="CTextLabel"
-          origin="54,121"
-          size="188,18"
-          title="T O N E"
-          transparent="true"
-          font-color="Muted"
-          font="Section"
-          text-alignment="center"
-          mouse-enabled="false"/>
+    <view class="CTextLabel" origin="670,128" size="390,18" title="SIGNAL PATH" transparent="true" font-color="Muted" font="Section" text-alignment="left" mouse-enabled="false"/>
+    <view class="CTextLabel" origin="670,157" size="390,18" title="TONE → FINISH → MASS → ROOM → OUTPUT" transparent="true" font-color="Text" font="Small" text-alignment="left" mouse-enabled="false"/>
+    <view class="CTextLabel" origin="670,181" size="390,16" title="ZERO LOOKAHEAD · AUTO LEVEL · TRUE 0–100% WET" transparent="true" font-color="Minor" font="Small" text-alignment="left" mouse-enabled="false"/>
 
-    <view class="CTextLabel"
-          origin="268,121"
-          size="126,18"
-          title="F I N I S H"
-          transparent="true"
-          font-color="Muted"
-          font="Section"
-          text-alignment="center"
-          mouse-enabled="false"/>
+    <view class="CTextLabel" origin="72,315" size="194,18" title="TONE CONTROL" transparent="true" font-color="Muted" font="Section" text-alignment="center" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="HGGFKnobLowCut" origin="66,348" size="104,104"/>
+    <view class="CView" custom-view-name="HGGFKnobMass" origin="170,348" size="104,104"/>
+    <view class="CTextLabel" origin="64,463" size="108,18" title="LOW CUT" transparent="true" font-color="Text" font="Label" text-alignment="center" mouse-enabled="false"/>
+    <view class="CTextLabel" origin="168,463" size="108,18" title="MASS" transparent="true" font-color="Text" font="Label" text-alignment="center" mouse-enabled="false"/>
+    <view class="CTextEdit" origin="74,487" size="88,22" control-tag="104" transparent="true" frame-width="0" font-color="Value" font="ValueFont" text-alignment="center"/>
+    <view class="CTextEdit" origin="178,487" size="88,22" control-tag="107" transparent="true" frame-width="0" font-color="Value" font="ValueFont" text-alignment="center"/>
 
-    <view class="CTextLabel"
-          origin="545,121"
-          size="112,18"
-          title="R O O M"
-          transparent="true"
-          font-color="Muted"
-          font="Section"
-          text-alignment="center"
-          mouse-enabled="false"/>
+    <view class="CTextLabel" origin="354,312" size="200,18" title="MAIN PROCESSING" transparent="true" font-color="Muted" font="Section" text-alignment="center" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="HGGFKnobFinish" origin="374,332" size="160,160"/>
+    <view class="CTextLabel" origin="379,493" size="150,20" title="FINISH" transparent="true" font-color="Text" font="Label" text-alignment="center" mouse-enabled="false"/>
+    <view class="CTextEdit" origin="414,514" size="80,20" control-tag="100" transparent="true" frame-width="0" font-color="Value" font="ValueFont" text-alignment="center"/>
 
-    <view class="CView"
-          custom-view-name="HGGFKnobLowCut"
-          origin="63,148"
-          size="92,92"/>
+    <view class="CTextLabel" origin="659,312" size="200,18" title="INDUSTRIAL ROOM" transparent="true" font-color="Muted" font="Section" text-alignment="center" mouse-enabled="false"/>
+    <view class="CTextLabel" origin="659,333" size="200,15" title="TRUE DRY / WET · METALLIC TAIL" transparent="true" font-color="Minor" font="Small" text-alignment="center" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="HGGFKnobWet" origin="654,365" size="96,96"/>
+    <view class="CView" custom-view-name="HGGFKnobDecay" origin="768,365" size="96,96"/>
+    <view class="CTextLabel" origin="654,466" size="96,18" title="WET" transparent="true" font-color="Text" font="Label" text-alignment="center" mouse-enabled="false"/>
+    <view class="CTextLabel" origin="768,466" size="96,18" title="DECAY" transparent="true" font-color="Text" font="Label" text-alignment="center" mouse-enabled="false"/>
+    <view class="CTextEdit" origin="662,489" size="80,20" control-tag="101" transparent="true" frame-width="0" font-color="Value" font="ValueFont" text-alignment="center"/>
+    <view class="CTextEdit" origin="776,489" size="80,20" control-tag="105" transparent="true" frame-width="0" font-color="Value" font="ValueFont" text-alignment="center"/>
 
-    <view class="CTextLabel"
-          origin="59,241"
-          size="100,16"
-          title="LOW CUT"
-          transparent="true"
-          font-color="Text"
-          font="Label"
-          text-alignment="center"
-          mouse-enabled="false"/>
+    <view class="CTextLabel" origin="929,312" size="122,18" title="OUTPUT" transparent="true" font-color="Muted" font="Section" text-alignment="center" mouse-enabled="false"/>
+    <view class="CView" custom-view-name="HGGFKnobOutput" origin="941,361" size="98,98"/>
+    <view class="CTextLabel" origin="929,468" size="122,18" title="LEVEL" transparent="true" font-color="Text" font="Label" text-alignment="center" mouse-enabled="false"/>
+    <view class="CTextEdit" origin="949,490" size="82,22" control-tag="102" transparent="true" frame-width="0" font-color="Value" font="ValueFont" text-alignment="center"/>
 
-    <view class="CParamDisplay"
-          origin="63,259"
-          size="92,18"
-          control-tag="104"
-          transparent="true"
-          frame-width="0"
-          font-color="Value"
-          font="ValueFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CTextLabel"
-          origin="55,279"
-          size="108,14"
-          title="OFF / 45–120 Hz"
-          transparent="true"
-          font-color="Minor"
-          font="MinorFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CView"
-          custom-view-name="HGGFKnobMass"
-          origin="169,160"
-          size="68,68"/>
-
-    <view class="CTextLabel"
-          origin="153,231"
-          size="100,16"
-          title="MASS"
-          transparent="true"
-          font-color="Text"
-          font="Label"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CParamDisplay"
-          origin="153,249"
-          size="100,18"
-          control-tag="107"
-          transparent="true"
-          frame-width="0"
-          font-color="Value"
-          font="ValueFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CTextLabel"
-          origin="151,269"
-          size="104,14"
-          title="WEIGHT • CLEANUP"
-          transparent="true"
-          font-color="Minor"
-          font="MinorFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CView"
-          custom-view-name="HGGFKnobOutput"
-          origin="75,300"
-          size="68,68"/>
-
-    <view class="CTextLabel"
-          origin="59,365"
-          size="100,15"
-          title="OUTPUT"
-          transparent="true"
-          font-color="Text"
-          font="Label"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CParamDisplay"
-          origin="59,379"
-          size="100,16"
-          control-tag="102"
-          transparent="true"
-          frame-width="0"
-          font-color="Value"
-          font="MinorFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CView"
-          custom-view-name="HGGFKnobFinish"
-          origin="251,150"
-          size="160,160"/>
-
-    <view class="CTextLabel"
-          origin="276,317"
-          size="110,20"
-          title="FINISH"
-          transparent="true"
-          font-color="Text"
-          font="Label"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CParamDisplay"
-          origin="281,340"
-          size="100,20"
-          control-tag="100"
-          transparent="true"
-          frame-width="0"
-          font-color="Value"
-          font="ValueFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CTextLabel"
-          origin="281,365"
-          size="100,14"
-          title="MODE"
-          transparent="true"
-          font-color="Muted"
-          font="MinorFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CSegmentButton"
-          origin="256,381"
-          size="150,28"
-          control-tag="106"
-          style="horizontal"
-          segment-names="1,2,3"
-          font="SwitchFont"
-          text-color="Muted"
-          text-color-highlighted="Text"
-          gradient="SwitchNormal"
-          gradient-highlighted="SwitchSelected"
-          frame-color="SwitchFrame"
-          frame-width="1"
-          round-radius="14"/>
-
-    <view class="CTextLabel"
-          origin="223,411"
-          size="216,12"
-          title="ADAPTIVE TIGHTNESS • BODY • HARSHNESS"
-          transparent="true"
-          font-color="Minor"
-          font="MinorFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CView"
-          custom-view-name="HGGFKnobWet"
-          origin="498,153"
-          size="90,90"/>
-
-    <view class="CView"
-          custom-view-name="HGGFKnobDecay"
-          origin="616,153"
-          size="90,90"/>
-
-    <view class="CTextLabel"
-          origin="500,244"
-          size="86,16"
-          title="WET"
-          transparent="true"
-          font-color="Text"
-          font="Label"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CTextLabel"
-          origin="618,244"
-          size="86,16"
-          title="DECAY"
-          transparent="true"
-          font-color="Text"
-          font="Label"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CParamDisplay"
-          origin="500,262"
-          size="86,18"
-          control-tag="101"
-          transparent="true"
-          frame-width="0"
-          font-color="Value"
-          font="ValueFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CParamDisplay"
-          origin="618,262"
-          size="86,18"
-          control-tag="105"
-          transparent="true"
-          frame-width="0"
-          font-color="Value"
-          font="ValueFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CTextLabel"
-          origin="510,294"
-          size="184,14"
-          title="DARK • WIDE • METALLIC TAIL"
-          transparent="true"
-          font-color="Minor"
-          font="MinorFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CTextLabel"
-          origin="585,72"
-          size="130,12"
-          title="PLUGIN"
-          transparent="true"
-          font-color="Muted"
-          font="MinorFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
-
-    <view class="CSegmentButton"
-          origin="585,86"
-          size="130,28"
-          control-tag="103"
-          style="horizontal"
-          segment-names="ACTIVE,BYPASS"
-          font="SwitchFont"
-          text-color="Text"
-          text-color-highlighted="Text"
-          gradient="SwitchNormal"
-          gradient-highlighted="SwitchSelected"
-          frame-color="SwitchFrame"
-          frame-width="1"
-          round-radius="14"/>
-
-    <view class="CTextLabel"
-          origin="286,89"
-          size="190,12"
-          title="ZERO LOOKAHEAD LATENCY"
-          transparent="true"
-          font-color="Minor"
-          font="MinorFont"
-          text-alignment="center"
-          mouse-enabled="false"/>
+    <view class="CTextLabel" origin="54,565" size="470,18" title="125A AUDIO SOFTWARE · MEASUREMENT-DRIVEN DSP" transparent="true" font-color="Minor" font="Small" text-alignment="left" mouse-enabled="false"/>
+    <view class="CTextLabel" origin="596,565" size="470,18" title="POST-AMP / POST-CAB · ZERO LOOKAHEAD LATENCY" transparent="true" font-color="Minor" font="Small" text-alignment="right" mouse-enabled="false"/>
   </template>
 </vstgui-ui-description>

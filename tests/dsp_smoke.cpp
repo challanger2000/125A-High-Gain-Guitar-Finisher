@@ -216,6 +216,44 @@ double measureMassGain(
         inputPower);
 }
 
+void verifyTrueRoomWetDryEndpoints() {
+    MetalFinisherDSP dry;
+    MetalFinisherDSP wet;
+
+    dry.prepare(sampleRate);
+    wet.prepare(sampleRate);
+
+    dry.setFinish(0.0);
+    dry.setMass(0.0);
+    dry.setLowCut(0.0);
+    dry.setRoomWet(0.0);
+    dry.setRoomDecay(1.0);
+    dry.reset();
+
+    wet.setFinish(0.0);
+    wet.setMass(0.0);
+    wet.setLowCut(0.0);
+    wet.setRoomWet(1.0);
+    wet.setRoomDecay(1.0);
+    wet.reset();
+
+    double dryLeft = 1.0;
+    double dryRight = -0.5;
+    double wetLeft = 1.0;
+    double wetRight = -0.5;
+
+    dry.processFrame(dryLeft, dryRight);
+    wet.processFrame(wetLeft, wetRight);
+
+    HGGF_REQUIRE(dryLeft == 1.0);
+    HGGF_REQUIRE(dryRight == -0.5);
+
+    // No zero-delay tap exists in ROOM. At true 100% WET, sample zero
+    // therefore contains no direct signal.
+    HGGF_REQUIRE(wetLeft == 0.0);
+    HGGF_REQUIRE(wetRight == 0.0);
+}
+
 void verifyLinearMassAmount() {
     MetalFinisherDSP dry;
     MetalFinisherDSP half;
@@ -575,6 +613,7 @@ void verifyStaticToneShapingAcrossSampleRates() {
 int main() {
     verifyExactTransparency();
     verifyLinearFinishAmount();
+    verifyTrueRoomWetDryEndpoints();
     verifyLinearMassAmount();
     verifyFinishReenableStartsClean();
     verifyPathologicalInputSafety();
@@ -635,6 +674,7 @@ int main() {
     std::cout
         << "DSP smoke test passed\n"
         << "FINISH 0/50/100 linear amount law passed for all modes\n"
+        << "ROOM 0% exact dry / 100% true wet endpoints passed\n"
         << "MASS 0/50/100 linear amount law passed\n"
         << "NaN/Inf/extreme/denormal safety passed\n"
         << "MASS gain at 140/220/280/1000 Hz: "

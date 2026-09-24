@@ -7,6 +7,16 @@ namespace HighGainGuitarFinisher::dsp {
 
 namespace {
 constexpr double kEpsilon = 1.0e-18;
+constexpr double kMaximumEnergyMagnitude = 1.0e100;
+
+double safeSquaredMagnitude(double magnitude) noexcept {
+    const double bounded =
+        std::min(
+            std::abs(magnitude),
+            kMaximumEnergyMagnitude);
+
+    return bounded * bounded;
+}
 }
 
 double AdaptiveBandController::timeCoefficient(
@@ -147,7 +157,8 @@ void AdaptiveBandController::processFrame(
             std::abs(bandLeft[band]),
             std::abs(bandRight[band]));
 
-        const double target = magnitude * magnitude;
+        const double target =
+            safeSquaredMagnitude(magnitude);
 
         const double fastCoefficient =
             target > fastEnergy_[band]
@@ -170,7 +181,8 @@ void AdaptiveBandController::processFrame(
 
     const double wideMagnitude =
         std::max(std::abs(left), std::abs(right));
-    const double wideTarget = wideMagnitude * wideMagnitude;
+    const double wideTarget =
+        safeSquaredMagnitude(wideMagnitude);
 
     const double wideFastCoefficient =
         wideTarget > wideFastEnergy_

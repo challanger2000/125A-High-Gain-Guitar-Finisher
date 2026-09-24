@@ -108,3 +108,11 @@ Target only the nonlinear core for oversampling unless whole-chain oversampling 
 The engineering branch is not a release declaration.
 
 A larger marketed generation/version is justified only after a measurable technical and sonic improvement over the published v0.2.0 reference is demonstrated and the full 125A release gate passes.
+
+## Rejected nonlinear cohesion experiment — 2026-09-24
+
+A first post-cab harmonic-cohesion candidate was evaluated offline on the retained Cnoc An Tursa / Bannockburn real cabinet material before any production-code implementation.
+
+The candidate used mild frequency-dependent low/mid soft saturation with level matching. At subtle settings, median tonal changes were too small to justify a new nonlinear stage. At stronger settings, the repeatable effect was primarily added upper-mid/high-frequency energy (roughly 2.5-10 kHz) with only small crest reduction, which conflicts with the finisher's existing harshness/fizz-control objective.
+
+Decision: reject this candidate rather than adding saturation for its own sake. A future nonlinear stage must demonstrate a clearer benefit on real high-gain material and pass THD/IMD/aliasing/oversampling and realtime-cost measurements before reconsideration.

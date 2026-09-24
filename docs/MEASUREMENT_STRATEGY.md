@@ -96,6 +96,8 @@ The next engineering benchmark records, for relevant sample-rate/block-size/cont
 
 Timing results from shared CI runners are evidence for regression and gross failures, not a universal end-user CPU guarantee. Shipping decisions should include representative local/host measurements.
 
+Functional finite-output assertions are executed during benchmark warm-up, outside the measured block interval, so per-sample test-harness branches are not misreported as DSP cost. Timer-call overhead is measured independently and removed from each timed block.
+
 ## Nonlinear-candidate measurements
 
 No harmonic/analogue stage is accepted without comparative measurements.

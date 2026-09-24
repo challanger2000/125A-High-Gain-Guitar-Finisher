@@ -197,7 +197,8 @@ BenchmarkResult runBenchmark(
     }
 
     auto processOneBlock =
-        [&](int blockIndex) {
+        [&](int blockIndex,
+            bool validateOutput) {
 
             const int programmeBlock =
                 blockIndex %
@@ -227,17 +228,21 @@ BenchmarkResult runBenchmark(
                     left,
                     right);
 
-                HGGF_REQUIRE(
-                    std::isfinite(left));
-                HGGF_REQUIRE(
-                    std::isfinite(right));
+                if (validateOutput) {
+                    HGGF_REQUIRE(
+                        std::isfinite(left));
+                    HGGF_REQUIRE(
+                        std::isfinite(right));
+                }
             }
         };
 
     for (int block = 0;
          block < warmupBlocks;
          ++block) {
-        processOneBlock(block);
+        processOneBlock(
+            block,
+            true);
     }
 
     std::vector<double> blockTimesUs;
@@ -255,8 +260,12 @@ BenchmarkResult runBenchmark(
         const auto start =
             Clock::now();
 
+        // Keep functional assertions out of the measured interval. The
+        // warm-up above already validates finite output, while the timed
+        // loop measures the DSP path rather than the test harness.
         processOneBlock(
-            block + warmupBlocks);
+            block + warmupBlocks,
+            false);
 
         const auto end =
             Clock::now();

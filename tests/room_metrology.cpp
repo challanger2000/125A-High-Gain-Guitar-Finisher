@@ -424,7 +424,7 @@ void verifyGuitarProgrammeStress() {
 
 void verifyTimingAcrossSampleRates() {
     for (const double sampleRate :
-         {44100.0, 48000.0, 96000.0}) {
+         {44100.0, 48000.0, 96000.0, 192000.0}) {
 
         IndustrialRoom room;
         room.prepare(sampleRate);
@@ -465,6 +465,171 @@ void verifyTimingAcrossSampleRates() {
         HGGF_REQUIRE(
             firstMs > 12.0 &&
             firstMs < 20.0);
+    }
+}
+
+struct RoomRateSignature {
+    double firstMs {0.0};
+    double lateToMidDb {0.0};
+    double longToMidDb {0.0};
+};
+
+RoomRateSignature measureRateSignature(
+    double sampleRate) {
+
+    IndustrialRoom room;
+    room.prepare(sampleRate);
+    room.setWetDry(1.0);
+    room.setDecay(1.0);
+
+    const std::size_t count =
+        static_cast<std::size_t>(
+            sampleRate * 3.2);
+
+    std::vector<double> left(
+        count,
+        0.0);
+
+    std::vector<double> right(
+        count,
+        0.0);
+
+    std::size_t first = count;
+
+    for (std::size_t i = 0;
+         i < count;
+         ++i) {
+
+        const double input =
+            i == 0 ? 1.0 : 0.0;
+
+        room.processFrame(
+            input,
+            input,
+            left[i],
+            right[i]);
+
+        if (first == count &&
+            std::max(
+                std::abs(left[i]),
+                std::abs(right[i])) >
+                1.0e-7) {
+
+            first = i;
+        }
+    }
+
+    HGGF_REQUIRE(
+        first < count);
+
+    const auto rmsAt =
+        [&](double startSeconds,
+            double endSeconds) {
+
+            const std::size_t begin =
+                static_cast<std::size_t>(
+                    startSeconds *
+                    sampleRate);
+
+            const std::size_t end =
+                std::min<std::size_t>(
+                    count,
+                    static_cast<std::size_t>(
+                        endSeconds *
+                        sampleRate));
+
+            long double sum = 0.0L;
+            std::size_t samples = 0;
+
+            for (std::size_t i = begin;
+                 i < end;
+                 ++i) {
+
+                sum += 0.5L * (
+                    static_cast<long double>(
+                        left[i]) *
+                        left[i] +
+                    static_cast<long double>(
+                        right[i]) *
+                        right[i]);
+
+                ++samples;
+            }
+
+            return samples > 0
+                ? std::sqrt(
+                    static_cast<double>(
+                        sum /
+                        static_cast<long double>(
+                            samples)))
+                : 0.0;
+        };
+
+    const double mid =
+        rmsAt(
+            0.15,
+            0.40);
+
+    const double late =
+        rmsAt(
+            0.50,
+            0.85);
+
+    const double longTail =
+        rmsAt(
+            2.00,
+            2.80);
+
+    HGGF_REQUIRE(mid > 0.0);
+    HGGF_REQUIRE(late > 0.0);
+    HGGF_REQUIRE(longTail > 0.0);
+
+    return {
+        1000.0 *
+            static_cast<double>(
+                first) /
+            sampleRate,
+        db(late / mid),
+        db(longTail / mid)
+    };
+}
+
+void measureRoomAcrossSampleRates() {
+    std::cerr
+        << "ROOM sample-rate signature rate/first-ms/late-mid/long-mid dB:\n";
+
+    for (const double sampleRate :
+         {44100.0,
+          48000.0,
+          96000.0,
+          192000.0}) {
+
+        const auto signature =
+            measureRateSignature(
+                sampleRate);
+
+        HGGF_REQUIRE(
+            std::isfinite(
+                signature.firstMs));
+
+        HGGF_REQUIRE(
+            std::isfinite(
+                signature.lateToMidDb));
+
+        HGGF_REQUIRE(
+            std::isfinite(
+                signature.longToMidDb));
+
+        std::cerr
+            << "  "
+            << sampleRate
+            << " / "
+            << signature.firstMs
+            << " / "
+            << signature.lateToMidDb
+            << " / "
+            << signature.longToMidDb
+            << "\n";
     }
 }
 
@@ -640,6 +805,7 @@ void verifyIndependentDecay() {
 int main() {
     verifyRoomZero();
     verifyTimingAcrossSampleRates();
+    measureRoomAcrossSampleRates();
     verifyTailClears();
     verifyAdaptiveDucking();
     verifyGuitarProgrammeStress();

@@ -491,6 +491,404 @@ void verifySilenceFlagsAndRoomTail() {
         kResultOk);
 }
 
+
+void verifyStopStartLifecycleReset() {
+    Processor processor;
+
+    HGGF_REQUIRE(
+        processor.initialize(nullptr) ==
+        kResultOk);
+
+    ProcessSetup setup {};
+    setup.processMode = kRealtime;
+    setup.symbolicSampleSize = kSample64;
+    setup.maxSamplesPerBlock = kBlockSize;
+    setup.sampleRate = kSampleRate;
+
+    HGGF_REQUIRE(
+        processor.setupProcessing(setup) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        processor.setActive(true) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        processor.setProcessing(true) ==
+        kResultOk);
+
+    ParameterChanges changes(4);
+    addChange(
+        changes,
+        HighGainGuitarFinisher::kFinish,
+        1.0);
+    addChange(
+        changes,
+        HighGainGuitarFinisher::kRoom,
+        1.0);
+    addChange(
+        changes,
+        HighGainGuitarFinisher::kRoomDecay,
+        1.0);
+    addChange(
+        changes,
+        HighGainGuitarFinisher::kMass,
+        1.0);
+
+    AudioBlock excited;
+    processAudio(
+        processor,
+        excited,
+        &changes);
+
+    for (int block = 0;
+         block < 8;
+         ++block) {
+
+        AudioBlock history;
+        for (int i = 0; i < kBlockSize; ++i) {
+            const double phase =
+                2.0 * 3.14159265358979323846 *
+                173.0 *
+                static_cast<double>(
+                    block * kBlockSize + i) /
+                kSampleRate;
+
+            history.inLeft[
+                static_cast<std::size_t>(i)] =
+                0.35 * std::sin(phase);
+
+            history.inRight[
+                static_cast<std::size_t>(i)] =
+                0.31 * std::sin(
+                    phase * 1.07);
+        }
+
+        processAudio(
+            processor,
+            history);
+    }
+
+    HGGF_REQUIRE(
+        processor.setProcessing(false) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        processor.setProcessing(true) ==
+        kResultOk);
+
+    AudioBlock afterRestart;
+    afterRestart.inLeft.fill(0.0);
+    afterRestart.inRight.fill(0.0);
+
+    processAudio(
+        processor,
+        afterRestart);
+
+    HGGF_REQUIRE(
+        afterRestart.outputBus.silenceFlags ==
+        uint64 {3});
+
+    for (int i = 0; i < kBlockSize; ++i) {
+        HGGF_REQUIRE(
+            afterRestart.outLeft[
+                static_cast<std::size_t>(i)] ==
+            0.0);
+
+        HGGF_REQUIRE(
+            afterRestart.outRight[
+                static_cast<std::size_t>(i)] ==
+            0.0);
+    }
+
+    HGGF_REQUIRE(
+        processor.setProcessing(false) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        processor.setActive(false) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        processor.terminate() ==
+        kResultOk);
+}
+
+void verifyFloatDoubleParity() {
+    Processor floatProcessor;
+    Processor doubleProcessor;
+
+    HGGF_REQUIRE(
+        floatProcessor.initialize(nullptr) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        doubleProcessor.initialize(nullptr) ==
+        kResultOk);
+
+    ProcessSetup floatSetup {};
+    floatSetup.processMode = kRealtime;
+    floatSetup.symbolicSampleSize = kSample32;
+    floatSetup.maxSamplesPerBlock = kBlockSize;
+    floatSetup.sampleRate = kSampleRate;
+
+    ProcessSetup doubleSetup =
+        floatSetup;
+
+    doubleSetup.symbolicSampleSize =
+        kSample64;
+
+    HGGF_REQUIRE(
+        floatProcessor.setupProcessing(
+            floatSetup) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        doubleProcessor.setupProcessing(
+            doubleSetup) ==
+        kResultOk);
+
+    HGGF_REQUIRE(
+        floatProcessor.setActive(true) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        doubleProcessor.setActive(true) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        floatProcessor.setProcessing(true) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        doubleProcessor.setProcessing(true) ==
+        kResultOk);
+
+    ParameterChanges floatChanges(7);
+    ParameterChanges doubleChanges(7);
+
+    const auto configure =
+        [](ParameterChanges& changes) {
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kFinish,
+                0.87);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kRoom,
+                0.37);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kRoomDecay,
+                0.68);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kLowCut80,
+                0.44);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kMode,
+                0.5);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kMass,
+                0.58);
+            addChange(
+                changes,
+                HighGainGuitarFinisher::kOutput,
+                0.57);
+        };
+
+    configure(floatChanges);
+    configure(doubleChanges);
+
+    std::array<float, kBlockSize> inLeft32 {};
+    std::array<float, kBlockSize> inRight32 {};
+    std::array<float, kBlockSize> outLeft32 {};
+    std::array<float, kBlockSize> outRight32 {};
+    std::array<float*, 2> in32 {
+        inLeft32.data(),
+        inRight32.data()
+    };
+    std::array<float*, 2> out32 {
+        outLeft32.data(),
+        outRight32.data()
+    };
+
+    std::array<double, kBlockSize> inLeft64 {};
+    std::array<double, kBlockSize> inRight64 {};
+    std::array<double, kBlockSize> outLeft64 {};
+    std::array<double, kBlockSize> outRight64 {};
+    std::array<double*, 2> in64 {
+        inLeft64.data(),
+        inRight64.data()
+    };
+    std::array<double*, 2> out64 {
+        outLeft64.data(),
+        outRight64.data()
+    };
+
+    AudioBusBuffers inBus32 {};
+    AudioBusBuffers outBus32 {};
+    AudioBusBuffers inBus64 {};
+    AudioBusBuffers outBus64 {};
+
+    inBus32.numChannels = 2;
+    outBus32.numChannels = 2;
+    inBus32.channelBuffers32 =
+        in32.data();
+    outBus32.channelBuffers32 =
+        out32.data();
+
+    inBus64.numChannels = 2;
+    outBus64.numChannels = 2;
+    inBus64.channelBuffers64 =
+        in64.data();
+    outBus64.channelBuffers64 =
+        out64.data();
+
+    ProcessData data32 {};
+    data32.processMode = kRealtime;
+    data32.symbolicSampleSize = kSample32;
+    data32.numSamples = kBlockSize;
+    data32.numInputs = 1;
+    data32.numOutputs = 1;
+    data32.inputs = &inBus32;
+    data32.outputs = &outBus32;
+
+    ProcessData data64 {};
+    data64.processMode = kRealtime;
+    data64.symbolicSampleSize = kSample64;
+    data64.numSamples = kBlockSize;
+    data64.numInputs = 1;
+    data64.numOutputs = 1;
+    data64.inputs = &inBus64;
+    data64.outputs = &outBus64;
+
+    constexpr double pi =
+        3.141592653589793238462643383279502884;
+
+    double maxDelta = 0.0;
+
+    for (int block = 0;
+         block < 16;
+         ++block) {
+
+        for (int i = 0;
+             i < kBlockSize;
+             ++i) {
+
+            const double sample =
+                static_cast<double>(
+                    block * kBlockSize + i);
+
+            const double t =
+                sample /
+                kSampleRate;
+
+            const double left =
+                0.31 * std::sin(
+                    2.0 * pi * 113.0 * t) +
+                0.18 * std::sin(
+                    2.0 * pi * 423.0 * t) +
+                0.16 * std::sin(
+                    2.0 * pi * 3770.0 * t);
+
+            const double right =
+                0.29 * std::sin(
+                    2.0 * pi * 127.0 * t) +
+                0.17 * std::sin(
+                    2.0 * pi * 463.0 * t) +
+                0.15 * std::sin(
+                    2.0 * pi * 6290.0 * t);
+
+            inLeft64[
+                static_cast<std::size_t>(i)] =
+                left;
+
+            inRight64[
+                static_cast<std::size_t>(i)] =
+                right;
+
+            inLeft32[
+                static_cast<std::size_t>(i)] =
+                static_cast<float>(left);
+
+            inRight32[
+                static_cast<std::size_t>(i)] =
+                static_cast<float>(right);
+        }
+
+        data32.inputParameterChanges =
+            block == 0
+                ? &floatChanges
+                : nullptr;
+
+        data64.inputParameterChanges =
+            block == 0
+                ? &doubleChanges
+                : nullptr;
+
+        HGGF_REQUIRE(
+            floatProcessor.process(data32) ==
+            kResultOk);
+
+        HGGF_REQUIRE(
+            doubleProcessor.process(data64) ==
+            kResultOk);
+
+        for (int i = 0;
+             i < kBlockSize;
+             ++i) {
+
+            const auto index =
+                static_cast<std::size_t>(i);
+
+            HGGF_REQUIRE(
+                std::isfinite(
+                    outLeft32[index]));
+            HGGF_REQUIRE(
+                std::isfinite(
+                    outRight32[index]));
+            HGGF_REQUIRE(
+                std::isfinite(
+                    outLeft64[index]));
+            HGGF_REQUIRE(
+                std::isfinite(
+                    outRight64[index]));
+
+            maxDelta =
+                std::max(
+                    maxDelta,
+                    std::abs(
+                        static_cast<double>(
+                            outLeft32[index]) -
+                        outLeft64[index]));
+
+            maxDelta =
+                std::max(
+                    maxDelta,
+                    std::abs(
+                        static_cast<double>(
+                            outRight32[index]) -
+                        outRight64[index]));
+        }
+    }
+
+    HGGF_REQUIRE(
+        maxDelta < 2.0e-6);
+
+    HGGF_REQUIRE(
+        floatProcessor.setProcessing(false) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        doubleProcessor.setProcessing(false) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        floatProcessor.setActive(false) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        doubleProcessor.setActive(false) ==
+        kResultOk);
+    HGGF_REQUIRE(
+        floatProcessor.terminate() ==
+        kResultOk);
+    HGGF_REQUIRE(
+        doubleProcessor.terminate() ==
+        kResultOk);
+}
+
 } // namespace
 
 int main() {
@@ -589,6 +987,8 @@ int main() {
 
     verifyOfflineRealtimeParity();
     verifySilenceFlagsAndRoomTail();
+    verifyStopStartLifecycleReset();
+    verifyFloatDoubleParity();
 
     return 0;
 }

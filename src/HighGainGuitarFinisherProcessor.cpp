@@ -645,16 +645,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
         readLastParameterChanges(
             data.inputParameterChanges);
 
+        // VST3 parameter-flush calls may arrive without audio.
+        // Update parameter state only; do not advance or reset audio/DSP
+        // lifecycle state here. The next real audio block will apply any
+        // bypass transition sample-safely.
         syncDSPParameters();
-
-        const bool bypassed =
-            bypass_ >= 0.5;
-
-        bypassCrossfade_.reset(
-            bypassed);
-
-        lastBypassed_ = bypassed;
-        bypassDSPDormant_ = bypassed;
 
         return kResultOk;
     }
@@ -668,16 +663,11 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
     if (numChannels <= 0) {
         readLastParameterChanges(
             data.inputParameterChanges);
+        // VST3 parameter-flush calls may arrive without audio.
+        // Update parameter state only; do not advance or reset audio/DSP
+        // lifecycle state here. The next real audio block will apply any
+        // bypass transition sample-safely.
         syncDSPParameters();
-
-        const bool bypassed =
-            bypass_ >= 0.5;
-
-        bypassCrossfade_.reset(
-            bypassed);
-
-        lastBypassed_ = bypassed;
-        bypassDSPDormant_ = bypassed;
 
         return kResultOk;
     }

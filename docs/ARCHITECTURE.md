@@ -152,3 +152,8 @@ These guards are failure containment, not normal-range tone shaping.
 Release-build tests use explicit runtime checks rather than C assert, so measurement failures remain active with NDEBUG.
 
 Current deterministic QA includes transparency, FINISH/MASS amount-law checks, adaptive fixtures, Auto Level behaviour, ROOM metrology, sample-rate coverage, impulse/latency checks and pathological-input recovery.
+
+
+## Parameter-only process calls
+
+VST3 may call `process()` with no audio buffers / zero samples to flush parameter changes while no audio is being processed. These calls update stored parameter values and DSP control targets only. They do not reset the finisher, bypass crossfade, or dormancy/lifecycle state. The next real audio block performs any required bypass transition.

@@ -14,6 +14,10 @@ using namespace HighGainGuitarFinisher;
 using namespace Steinberg;
 using namespace Steinberg::Vst;
 
+#if defined(_WIN32)
+void* moduleHandle = nullptr;
+#endif
+
 namespace {
 
 void rewindStream(MemoryStream& stream) {

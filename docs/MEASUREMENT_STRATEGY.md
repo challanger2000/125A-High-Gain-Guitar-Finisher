@@ -2,102 +2,118 @@
 
 The finisher is not tuned from a single guitar file or by ear alone.
 
-The repository keeps deterministic DSP measurements separate from production code and runs them on every manually triggered Windows build.
+Deterministic DSP measurements are kept separate from production code. Synthetic fixtures establish controlled regressions; fixed real guitar material establishes whether behaviour transfers to the actual product task.
 
 ## Release-test enforcement
 
-All pass/fail guards use explicit runtime checks.
+All pass/fail guards use explicit runtime checks and remain active in Release builds.
 
-They do not depend on C assert, so Release builds with NDEBUG still fail immediately when a measurement leaves its allowed range.
+A green compile is not a release PASS. Final judgment requires the applicable Steinberg and 125A QA gates.
 
 ## FINISH measurements
 
 Current checks include:
 
-- exact transparency at FINISH = 0 when ROOM and LOW CUT are off,
-- adaptive movement across different synthetic guitar signatures,
-- Auto Level bounds and silence reset,
-- RMS, peak and crest behaviour,
-- stereo correlation,
-- detailed tonal-band energy,
-- impulse and zero-lookahead latency.
+- exact transparency at FINISH = 0 when MASS, ROOM and LOW CUT are off;
+- exact FINISH 0/50/100 interpolation behaviour;
+- adaptive movement across different synthetic guitar signatures;
+- mode separation;
+- Auto Level bounds, phrase bootstrap, anti-pumping behaviour and silence reset;
+- RMS, sample peak and crest behaviour;
+- stereo correlation;
+- detailed tonal-band energy;
+- impulse and zero-lookahead latency;
+- stability from 44.1 through 192 kHz.
 
-## ROOM impulse metrology
+## MASS measurements
 
-ROOM has a dedicated wet-only test.
+Current checks include:
 
-The locally verified design currently measures approximately:
+- exact neutrality at 0%;
+- exact linear interpolation at 50%;
+- full-curve response at reference frequencies;
+- stable sample-rate operation;
+- real-audio band/RMS/peak comparisons after the complete FINISH path.
 
-- first reflection: 15.71 ms at 48 kHz,
-- maximum wet/dry level: -6.13 dB,
-- wet stereo correlation: 0.18,
-- mono/stereo wet-energy ratio: -2.29 dB,
-- wet low-band energy versus mid-band energy: -10.04 dB,
-- wet high-band energy versus mid-band energy: -8.64 dB.
+## ROOM metrology
 
-The verified 48 kHz impulse RMS windows are approximately -52.77 dB early, -59.56 dB mid, -66.87 dB late, -75.28 dB very-late, -89.53 dB long-tail and -113.38 dB final-tail.
+ROOM has dedicated impulse, programme and spectral tests.
 
-This is deliberately a short room rather than a conventional long reverb.
+Current guards cover:
 
-## ROOM timing across sample rates
+- first wet-arrival timing across sample rates;
+- wet-only level;
+- early/mid/late/tail energy windows;
+- independent DECAY behaviour;
+- low-frequency attenuation relative to the midrange;
+- high-frequency attenuation relative to the midrange;
+- stereo correlation;
+- mono energy retention;
+- adaptive ducking and recovery;
+- exact zero wet contribution when WET returns to zero;
+- finite output and tail clearing.
 
-The first-reflection timing is checked at:
+Recorded numeric reference values must be refreshed only when an intentional ROOM algorithm change is technically justified. They are not regenerated merely to make a regression pass.
 
-- 44.1 kHz,
-- 48 kHz,
-- 96 kHz.
+## Numerical torture
 
-The test requires the first wet arrival to remain in the intended short-room window independent of sample rate.
+The engineering branch explicitly tests:
 
-## ROOM spectral checks
+- NaN input;
+- positive and negative infinity;
+- denormal/subnormal input;
+- extremely large but finite samples;
+- normal programme recovery after pathological samples.
 
-Wet-only tone measurements enforce:
+The DSP must return finite output and must not leave filter/detector state poisoned.
 
-- low-frequency attenuation relative to the midrange,
-- high-frequency attenuation relative to the midrange.
+Internal safeguards bound detector energy and recover non-finite filter state. Biquad residual states below the numerical floor are collapsed to exact zero to reduce denormal risk.
 
-These checks guard the 200 Hz wet high-pass and dark upper-frequency damping without forcing one exact comb-filter response.
+## Automation and state
 
-## ROOM stereo and mono checks
+Processor QA must verify:
 
-The wet impulse must decorrelate left and right without becoming anti-phase.
+- stable public parameter IDs;
+- legacy state migration;
+- safe defaults for parameters absent from older states;
+- sample-offset-aware VST3 automation;
+- bypass transitions;
+- project/state recall reproducing the intended audio state.
 
-A separate mono-energy guard prevents a superficially wide room from disappearing when summed.
+## Realtime measurement
 
-## ROOM state checks
+CPU quality is judged by callback-tail behaviour, not average CPU alone.
 
-Tests also verify:
+The next engineering benchmark records, for relevant sample-rate/block-size/control combinations:
 
-- ROOM = 0 produces exactly zero wet output,
-- room output stays finite,
-- the tail clears after ROOM returns to zero.
+- mean block processing time;
+- p95;
+- p99;
+- maximum;
+- block deadline;
+- overrun count;
+- timer/instrumentation overhead.
 
-## Real guitar reference
+Timing results from shared CI runners are evidence for regression and gross failures, not a universal end-user CPU guarantee. Shipping decisions should include representative local/host measurements.
 
-Before ROOM was integrated into the plugin, the exact ROOM algorithm was run offline on the latest FINISH 100% guitar render.
+## Nonlinear-candidate measurements
 
-At ROOM = 100 it measured approximately:
+No harmonic/analogue stage is accepted without comparative measurements.
 
-- wet RMS about -23.3 dB relative to the guitar,
-- integrated loudness change about +0.04 LU,
-- sample-peak change about +0.44 dB,
-- stereo correlation remained essentially unchanged,
-- mid/side balance changed by only about 0.07 dB.
+For any candidate measure, where applicable:
 
-This is the intended scale: audible spatial depth without a reverb blanket.
-
-## Later measurements
-
-Before any nonlinear stage or oversampling is added:
-
-- harmonic spectrum,
-- THD/THD+N where meaningful,
-- alias energy,
-- 1x/2x/4x comparison,
-- exact path latency.
+- harmonic spectrum / THD across input level and frequency;
+- IMD;
+- asymmetry and DC;
+- alias energy;
+- 1x/2x/4x targeted oversampling;
+- passband/phase impact;
+- latency;
+- realtime cost;
+- level-matched real-guitar comparison.
 
 ## Real-world audio
 
-Synthetic fixtures are regression tools, not the final product target.
+Synthetic fixtures are necessary regression tools but not the final product target.
 
-After the Windows build passes, ROOM must still be rendered on real guitar material at several macro values and judged together with the measurements.
+Real guitar fixtures must cover more than one source/capture family. Comparisons are level matched so louder is not mistaken for better. Subjective listening is used only after objective regressions are clean.

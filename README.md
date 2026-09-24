@@ -52,7 +52,16 @@ The manual **Build Windows VST3** workflow builds the plugin and runs:
 - processor/controller state migration parity,
 - parameter-only VST3 flush and artifact-safe bypass transitions,
 - exact offline/realtime render parity,
-- per-channel silence flags including delayed ROOM-tail reactivation.
+- per-channel silence flags including delayed ROOM-tail reactivation,
+- stop/start DSP-state reset,
+- 32-bit / 64-bit processor parity,
+- Mono ROOM collapse parity against Stereo,
+- FINISH, MASS and LOW CUT sample-rate response through 192 kHz,
+- Auto Level anti-pumping parity through 192 kHz,
+- ROOM timing/decay signature through 192 kHz,
+- zero heap allocations in the warmed realtime DSP processing path.
+
+The current engineering head has also completed Steinberg Validator 47/47 and the full internal suite at 14/14 tests.
 
 All test guards are runtime-enforced in Release builds.
 

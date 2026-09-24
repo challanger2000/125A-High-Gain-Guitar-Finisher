@@ -135,7 +135,7 @@ In mono operation, the main FINISH/MASS path receives the mono source on both in
 
 ## Numerical and realtime safety
 
-The audio path performs no file/network I/O, logging or blocking locks and allocates no delay memory during process().
+The audio path performs no file/network I/O, logging or blocking locks and allocates no delay memory during process(). A dedicated Release regression now verifies zero heap allocations after setup/warm-up while FINISH, MASS, LOW CUT, ROOM and Mode 2 are active.
 
 Numerical safeguards include:
 

@@ -23,7 +23,8 @@ Current checks include:
 - stereo correlation;
 - detailed tonal-band energy;
 - impulse and zero-lookahead latency;
-- stability from 44.1 through 192 kHz.
+- stability from 44.1 through 192 kHz;
+- full-path FINISH RMS-effect consistency across 44.1/48/96/192 kHz (latest measured spread approximately 0.005 dB).
 
 ## MASS measurements
 
@@ -33,6 +34,7 @@ Current checks include:
 - exact linear interpolation at 50%;
 - full-curve response at reference frequencies;
 - stable sample-rate operation;
+- cross-rate response checks for the 140 Hz weight, 220 Hz cleanup and 1 kHz residual response;
 - real-audio band/RMS/peak comparisons after the complete FINISH path.
 
 ## ROOM metrology
@@ -51,7 +53,8 @@ Current guards cover:
 - mono energy retention;
 - adaptive ducking and recovery;
 - exact zero wet contribution when WET returns to zero;
-- finite output and tail clearing.
+- finite output and tail clearing;
+- first-arrival and decay-envelope signature through 192 kHz.
 
 Recorded numeric reference values must be refreshed only when an intentional ROOM algorithm change is technically justified. They are not regenerated merely to make a regression pass.
 
@@ -100,6 +103,8 @@ The next engineering benchmark records, for relevant sample-rate/block-size/cont
 
 Timing results from shared CI runners are evidence for regression and gross failures, not a universal end-user CPU guarantee. Shipping decisions should include representative local/host measurements.
 
+Latest confirmed CI run (#67) observed 0 overruns across all 16 benchmark combinations from 44.1 to 192 kHz and block sizes 32 to 256 samples. At 192 kHz / 256 samples, measured p99 was approximately 375 us and maximum approximately 613 us against a 1333 us block deadline. An earlier isolated single-overrun CI observation did not reproduce on the later confirmed run and is treated as runner-jitter evidence rather than hidden.
+
 Functional finite-output assertions are executed during benchmark warm-up, outside the measured block interval, so per-sample test-harness branches are not misreported as DSP cost. Timer-call overhead is measured independently and removed from each timed block.
 
 ## Nonlinear-candidate measurements
@@ -123,3 +128,12 @@ For any candidate measure, where applicable:
 Synthetic fixtures are necessary regression tools but not the final product target.
 
 Real guitar fixtures must cover more than one source/capture family. Comparisons are level matched so louder is not mistaken for better. Subjective listening is used only after objective regressions are clean.
+
+
+## Realtime allocation proof
+
+After all setup/prepare work and a warm-up phase, the Release regression test enables a global allocation counter and processes 48,000 samples with FINISH, MASS, LOW CUT, ROOM and Mode 2 active.
+
+Acceptance criterion: zero `new` / `new[]` / aligned-new heap allocations during the measured processing window.
+
+Latest confirmed result: 0 allocations.

@@ -193,3 +193,31 @@ add_test(
     NAME HighGainGuitarFinisher.Optimizer.Behavior
     COMMAND HighGainGuitarOptimizerBehaviorTests
 )
+
+
+add_executable(HighGainGuitarFinisherRealtimeBenchmark
+    realtime_benchmark.cpp
+    ${HGGF_DSP_SOURCES}
+)
+
+target_include_directories(
+    HighGainGuitarFinisherRealtimeBenchmark
+    PRIVATE
+        .
+        ../src/dsp
+)
+
+target_compile_features(
+    HighGainGuitarFinisherRealtimeBenchmark
+    PRIVATE
+        cxx_std_17
+)
+
+hggf_enable_project_warnings(
+    HighGainGuitarFinisherRealtimeBenchmark
+)
+
+add_test(
+    NAME HighGainGuitarFinisher.Realtime.Benchmark
+    COMMAND HighGainGuitarFinisherRealtimeBenchmark
+)

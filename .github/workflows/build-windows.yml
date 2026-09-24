@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - optimizer-rework
+      - v0.3.0-engineering
     paths:
-      - OPTIMIZER_REWORK_BUILD_TRIGGER.txt
+      - CMakeLists.txt
+      - src/**
+      - tests/**
+      - resource/**
+      - .github/workflows/build-windows.yml
 
 jobs:
   build:

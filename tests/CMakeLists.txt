@@ -254,6 +254,7 @@ add_executable(HighGainGuitarFinisherStateMigrationTests
     state_migration_tests.cpp
     ../src/HighGainGuitarFinisherProcessor.cpp
     ${HGGF_DSP_SOURCES}
+    ${vst3sdk_SOURCE_DIR}/public.sdk/source/common/memorystream.cpp
 )
 
 target_include_directories(

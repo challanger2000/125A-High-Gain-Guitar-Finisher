@@ -3,11 +3,11 @@
 #include "dsp/LowCutMapping.h"
 
 #include "base/source/fstreamer.h"
-#include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/vstspeaker.h"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace HighGainGuitarFinisher {
 
@@ -50,9 +50,6 @@ tresult PLUGIN_API Processor::canProcessSampleSize(int32 symbolicSampleSize) {
 }
 
 uint32 PLUGIN_API Processor::getTailSamples() {
-    // Report the maximum ROOM decay to the host even when ROOM is currently
-    // at zero. Hosts may cache this value, and a later ROOM automation change
-    // must not allow the reverb tail to be suspended or truncated.
     constexpr double kMaximumTailSeconds = 6.0;
 
     return static_cast<uint32>(
@@ -68,20 +65,13 @@ tresult PLUGIN_API Processor::setupProcessing(ProcessSetup& setup) {
         ? setup.sampleRate
         : 44100.0;
 
-    // ROOM allocates delay storage during prepare(). Keep allocation out of
-    // process(), but never let an allocation failure escape across the VST3 ABI.
     try {
         finisher_.prepare(sampleRate_);
     } catch (...) {
         return kResultFalse;
     }
 
-    finisher_.setFinish(finish_);
-    finisher_.setLowCut(lowCut_);
-    finisher_.setRoomWet(room_);
-    finisher_.setRoomDecay(roomDecay_);
-    finisher_.setMode(mode_);
-    finisher_.setMass(mass_);
+    syncDSPParameters();
     lastBypassed_ = bypass_ >= 0.5;
 
     return AudioEffect::setupProcessing(setup);
@@ -98,14 +88,35 @@ tresult PLUGIN_API Processor::setProcessing(TBool state) {
     if (state)
         finisher_.reset();
 
-    // Steinberg AudioEffect::setProcessing() deliberately returns
-    // kNotImplemented. Hosts and lifecycle tests expect our concrete
-    // processor to acknowledge the transition explicitly.
     AudioEffect::setProcessing(state);
     return kResultTrue;
 }
 
-void Processor::readParameterChanges(IParameterChanges* changes) {
+void Processor::applyParameterValue(
+    ParamID id,
+    ParamValue value) noexcept {
+
+    if (!std::isfinite(value))
+        return;
+
+    value = std::clamp(value, 0.0, 1.0);
+
+    switch (id) {
+        case kFinish:    finish_ = value; break;
+        case kRoom:      room_ = value; break;
+        case kRoomDecay: roomDecay_ = value; break;
+        case kOutput:    output_ = value; break;
+        case kBypass:    bypass_ = value; break;
+        case kLowCut80:  lowCut_ = value; break;
+        case kMode:      mode_ = value; break;
+        case kMass:      mass_ = value; break;
+        default: break;
+    }
+}
+
+void Processor::readLastParameterChanges(
+    IParameterChanges* changes) noexcept {
+
     if (!changes)
         return;
 
@@ -120,27 +131,135 @@ void Processor::readParameterChanges(IParameterChanges* changes) {
         if (queue->getPoint(
                 queue->getPointCount() - 1,
                 sampleOffset,
-                value) != kResultTrue) {
-            continue;
-        }
-
-        if (!std::isfinite(value))
-            continue;
-
-        value = std::clamp(value, 0.0, 1.0);
-
-        switch (queue->getParameterId()) {
-            case kFinish:   finish_ = value; break;
-            case kRoom:     room_ = value; break;
-            case kRoomDecay: roomDecay_ = value; break;
-            case kOutput:   output_ = value; break;
-            case kBypass:   bypass_ = value; break;
-            case kLowCut80: lowCut_ = value; break;
-            case kMode:     mode_ = value; break;
-            case kMass:     mass_ = value; break;
-            default: break;
+                value) == kResultTrue) {
+            applyParameterValue(
+                queue->getParameterId(),
+                value);
         }
     }
+}
+
+void Processor::initializeAutomationCursors(
+    IParameterChanges* changes,
+    std::array<AutomationCursor, kAutomatedParameterCount>& cursors) noexcept {
+
+    for (auto& cursor : cursors)
+        cursor = {};
+
+    if (!changes)
+        return;
+
+    std::size_t cursorIndex = 0;
+
+    for (int32 i = 0;
+         i < changes->getParameterCount() &&
+         cursorIndex < cursors.size();
+         ++i) {
+
+        auto* queue =
+            changes->getParameterData(i);
+
+        if (!queue ||
+            queue->getPointCount() <= 0) {
+            continue;
+        }
+
+        const ParamID id =
+            queue->getParameterId();
+
+        switch (id) {
+            case kFinish:
+            case kRoom:
+            case kRoomDecay:
+            case kOutput:
+            case kBypass:
+            case kLowCut80:
+            case kMode:
+            case kMass:
+                break;
+            default:
+                continue;
+        }
+
+        auto& cursor =
+            cursors[cursorIndex++];
+
+        cursor.queue = queue;
+        cursor.pointCount =
+            queue->getPointCount();
+        cursor.id = id;
+
+        int32 offset = 0;
+        ParamValue value = 0.0;
+
+        if (queue->getPoint(
+                0,
+                offset,
+                value) == kResultTrue) {
+            cursor.nextSampleOffset = offset;
+            cursor.nextValue = value;
+            cursor.hasNext = true;
+        }
+    }
+}
+
+bool Processor::applyAutomationAtSample(
+    std::array<AutomationCursor, kAutomatedParameterCount>& cursors,
+    int32 sampleOffset) noexcept {
+
+    bool changed = false;
+
+    for (auto& cursor : cursors) {
+        while (cursor.hasNext &&
+               cursor.nextSampleOffset <= sampleOffset) {
+
+            applyParameterValue(
+                cursor.id,
+                cursor.nextValue);
+
+            changed = true;
+            ++cursor.pointIndex;
+
+            if (cursor.pointIndex >=
+                cursor.pointCount) {
+                cursor.hasNext = false;
+                break;
+            }
+
+            int32 nextOffset = 0;
+            ParamValue nextValue = 0.0;
+
+            if (cursor.queue->getPoint(
+                    cursor.pointIndex,
+                    nextOffset,
+                    nextValue) != kResultTrue) {
+                cursor.hasNext = false;
+                break;
+            }
+
+            // Invalid backwards-moving offsets are ignored rather than
+            // replayed indefinitely inside the audio callback.
+            if (nextOffset <
+                cursor.nextSampleOffset) {
+                cursor.hasNext = false;
+                break;
+            }
+
+            cursor.nextSampleOffset = nextOffset;
+            cursor.nextValue = nextValue;
+        }
+    }
+
+    return changed;
+}
+
+void Processor::syncDSPParameters() noexcept {
+    finisher_.setFinish(finish_);
+    finisher_.setLowCut(lowCut_);
+    finisher_.setRoomWet(room_);
+    finisher_.setRoomDecay(roomDecay_);
+    finisher_.setMode(mode_);
+    finisher_.setMass(mass_);
 }
 
 template <typename Sample>
@@ -148,49 +267,99 @@ void Processor::processBlock(
     Sample** inputs,
     Sample** outputs,
     int32 numSamples,
-    int32 numChannels) {
+    int32 numChannels,
+    IParameterChanges* parameterChanges) {
 
-    const bool bypassed = bypass_ >= 0.5;
+    std::array<
+        AutomationCursor,
+        kAutomatedParameterCount> cursors {};
+
+    initializeAutomationCursors(
+        parameterChanges,
+        cursors);
+
+    bool bypassed =
+        bypass_ >= 0.5;
 
     if (bypassed != lastBypassed_) {
         finisher_.reset();
         lastBypassed_ = bypassed;
     }
 
-    const double outputDb = (output_ * 24.0) - 12.0;
+    syncDSPParameters();
 
-    const double outputGain =
+    double outputGain =
         bypassed
             ? 1.0
-            : std::pow(10.0, outputDb / 20.0);
+            : std::pow(
+                10.0,
+                ((output_ * 24.0) - 12.0) /
+                    20.0);
 
-    finisher_.setFinish(finish_);
-    finisher_.setLowCut(lowCut_);
-    finisher_.setRoomWet(room_);
-    finisher_.setRoomDecay(roomDecay_);
-    finisher_.setMode(mode_);
-    finisher_.setMass(mass_);
+    const Sample* inputLeft =
+        inputs ? inputs[0] : nullptr;
 
-    for (int32 sample = 0; sample < numSamples; ++sample) {
-        const Sample* inputLeft = inputs[0];
-        const Sample* inputRight =
-            numChannels > 1 ? inputs[1] : inputs[0];
+    const Sample* inputRight =
+        inputs
+            ? (numChannels > 1
+                ? inputs[1]
+                : inputs[0])
+            : nullptr;
 
-        Sample* outputLeft = outputs[0];
-        Sample* outputRight =
-            numChannels > 1 ? outputs[1] : nullptr;
+    Sample* outputLeft =
+        outputs ? outputs[0] : nullptr;
+
+    Sample* outputRight =
+        outputs && numChannels > 1
+            ? outputs[1]
+            : nullptr;
+
+    for (int32 sample = 0;
+         sample < numSamples;
+         ++sample) {
+
+        if (applyAutomationAtSample(
+                cursors,
+                sample)) {
+
+            const bool nextBypassed =
+                bypass_ >= 0.5;
+
+            if (nextBypassed !=
+                lastBypassed_) {
+                finisher_.reset();
+                lastBypassed_ =
+                    nextBypassed;
+            }
+
+            bypassed =
+                nextBypassed;
+
+            syncDSPParameters();
+
+            outputGain =
+                bypassed
+                    ? 1.0
+                    : std::pow(
+                        10.0,
+                        ((output_ * 24.0) -
+                         12.0) /
+                            20.0);
+        }
 
         if (!outputLeft)
             continue;
 
         double left =
             inputLeft
-                ? static_cast<double>(inputLeft[sample])
+                ? static_cast<double>(
+                    inputLeft[sample])
                 : 0.0;
 
         double right =
             inputRight
-                ? static_cast<double>(inputRight[sample])
+                ? static_cast<double>(
+                    inputRight[sample])
                 : left;
 
         if (!std::isfinite(left))
@@ -199,24 +368,40 @@ void Processor::processBlock(
             right = 0.0;
 
         if (!bypassed)
-            finisher_.processFrame(left, right);
+            finisher_.processFrame(
+                left,
+                right);
+
+        left *= outputGain;
+        right *= outputGain;
+
+        if (!std::isfinite(left))
+            left = 0.0;
+        if (!std::isfinite(right))
+            right = 0.0;
 
         outputLeft[sample] =
-            static_cast<Sample>(left * outputGain);
+            static_cast<Sample>(left);
 
         if (outputRight) {
             outputRight[sample] =
-                static_cast<Sample>(right * outputGain);
+                static_cast<Sample>(right);
         }
     }
 }
 
 tresult PLUGIN_API Processor::process(ProcessData& data) {
-    readParameterChanges(data.inputParameterChanges);
-
     if (data.numInputs == 0 ||
         data.numOutputs == 0 ||
         data.numSamples <= 0) {
+
+        readLastParameterChanges(
+            data.inputParameterChanges);
+
+        syncDSPParameters();
+        lastBypassed_ =
+            bypass_ >= 0.5;
+
         return kResultOk;
     }
 
@@ -226,21 +411,27 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
             data.inputs[0].numChannels,
             data.outputs[0].numChannels));
 
-    if (numChannels <= 0)
+    if (numChannels <= 0) {
+        readLastParameterChanges(
+            data.inputParameterChanges);
+        syncDSPParameters();
         return kResultOk;
+    }
 
     if (data.symbolicSampleSize == kSample32) {
         processBlock(
             data.inputs[0].channelBuffers32,
             data.outputs[0].channelBuffers32,
             data.numSamples,
-            numChannels);
+            numChannels,
+            data.inputParameterChanges);
     } else if (data.symbolicSampleSize == kSample64) {
         processBlock(
             data.inputs[0].channelBuffers64,
             data.outputs[0].channelBuffers64,
             data.numSamples,
-            numChannels);
+            numChannels,
+            data.inputParameterChanges);
     } else {
         return kResultFalse;
     }
@@ -292,7 +483,8 @@ tresult PLUGIN_API Processor::process(ProcessData& data) {
     }
 
     data.outputs[0].silenceFlags = silent
-        ? ((Steinberg::uint64 {1} << numChannels) - 1)
+        ? ((Steinberg::uint64 {1} <<
+            numChannels) - 1)
         : 0;
 
     return kResultOk;
@@ -314,10 +506,15 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
     double legacyValues[4] {};
 
     for (double& value : legacyValues) {
-        if (!stream.readDouble(value) || !std::isfinite(value))
+        if (!stream.readDouble(value) ||
+            !std::isfinite(value))
             return kResultFalse;
 
-        value = std::clamp(value, 0.0, 1.0);
+        value =
+            std::clamp(
+                value,
+                0.0,
+                1.0);
     }
 
     finish_ = legacyValues[0];
@@ -335,9 +532,13 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
 
         lowCut_ =
             version >= 4
-                ? std::clamp(savedLowCut, 0.0, 1.0)
+                ? std::clamp(
+                    savedLowCut,
+                    0.0,
+                    1.0)
                 : (savedLowCut >= 0.5
-                    ? dsp::lowCutNormalizedFromFrequency(80.0)
+                    ? dsp::lowCutNormalizedFromFrequency(
+                        80.0)
                     : 0.0);
     } else {
         lowCut_ = 0.0;
@@ -350,7 +551,10 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
         }
 
         roomDecay_ =
-            std::clamp(roomDecay_, 0.0, 1.0);
+            std::clamp(
+                roomDecay_,
+                0.0,
+                1.0);
     } else {
         roomDecay_ = room_;
     }
@@ -361,7 +565,11 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
             return kResultFalse;
         }
 
-        mode_ = std::clamp(mode_, 0.0, 1.0);
+        mode_ =
+            std::clamp(
+                mode_,
+                0.0,
+                1.0);
     } else {
         mode_ = 0.0;
     }
@@ -372,19 +580,19 @@ tresult PLUGIN_API Processor::setState(IBStream* state) {
             return kResultFalse;
         }
 
-        mass_ = std::clamp(mass_, 0.0, 1.0);
+        mass_ =
+            std::clamp(
+                mass_,
+                0.0,
+                1.0);
     } else {
         mass_ = 0.0;
     }
 
-    finisher_.setFinish(finish_);
-    finisher_.setMass(mass_);
-    finisher_.setLowCut(lowCut_);
-    finisher_.setRoomWet(room_);
-    finisher_.setRoomDecay(roomDecay_);
-    finisher_.setMode(mode_);
+    syncDSPParameters();
     finisher_.reset();
-    lastBypassed_ = bypass_ >= 0.5;
+    lastBypassed_ =
+        bypass_ >= 0.5;
 
     return kResultOk;
 }
